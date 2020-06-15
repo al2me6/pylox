@@ -10,4 +10,4 @@ The implementation here is largely based on Bob's AST-walking `jlox`, with some 
 
 `pylox` is licensed under the [GNU GPL, version 3](./LICENSE).
 
-Test suites and the Lox language are the work of [Robert Nystrom](https://github.com/munificent) are distributed under their original licenses.
+Test suites and the Lox language are the work of [Robert Nystrom](https://github.com/munificent); they are distributed under their original licenses.
