@@ -15,7 +15,6 @@ class Expr(Visitor, Visitable, ABC):
 
     Implements Visitor<Expr> for production of nice debug output.
     """
-
     # pylint: disable=invalid-name
 
     def _visit_BinaryExpr__(self, expr: BinaryExpr) -> str:
@@ -25,7 +24,7 @@ class Expr(Visitor, Visitable, ABC):
         return self._render("group", expr.expression)
 
     def _visit_LiteralExpr__(self, expr: LiteralExpr) -> str:
-        if expr.value is None:  # the null type is "nil" in Lox
+        if expr.value is None:  # The null type is "nil" in Lox.
             return "nil"
         return str(expr.value)
 
@@ -33,13 +32,13 @@ class Expr(Visitor, Visitable, ABC):
         return self._render(expr.operator.lexeme, expr.right)
 
     def _render(self, name: str, *exprs: Expr) -> str:
-        # recursively render sub-expressions
+        # Recursively render sub-expressions.
         sub_expressions = " ".join(expr.accept(self) for expr in exprs)
         return f"({' '.join((name, sub_expressions))})"
 
     def __str__(self) -> str:
         try:
-            return self.accept(self)  # accepting an Expr triggers rendering
+            return self.accept(self)  # Accepting an Expr triggers rendering.
         except NotImplementedError:
             return repr(self)
 

@@ -50,11 +50,13 @@ class TokenType(Enum):
 
     @classmethod
     def iter_values(cls) -> Iterator[Any]:
+        """Iterate over the values of the enum."""
         for variant in cls:
             yield variant.value
 
 
-# auto() variants have integer values
+# auto() variants have integer values. Filter the remaining values by length to isolate the target ones.
+# THIS IS FRAGILE CODE: addition single-character keywords or three-character symbols will break this.
 SINGLE_CHAR_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 1, TokenType.iter_values()))
 COMPOUND_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 2, TokenType.iter_values()))
 
@@ -72,6 +74,10 @@ class Token:
     offset: int
 
     def __eq__(self, other: Any) -> bool:
+        """Compare a `TokenType` to a `Token`'s own type.
+
+        i.e., a `Token` of type `FOO` is equal to `TokenType.FOO`. This provides better
+        ergonomics when used with `StreamView`, given the use-case of Token."""
         if isinstance(other, TokenType):
             return self.token_type is other
         return super().__eq__(other)
@@ -79,12 +85,13 @@ class Token:
     def __str__(self) -> str:
         attributes = ", ".join(
             f"{name}={repr(getattr(self, name))}"
-            for name in ("lexeme", "literal") if getattr(self, name)
+            for name in ("lexeme", "literal")
+            if getattr(self, name)
         )
         return f"{self.token_type.name}{': ' if attributes else ''}{attributes}"
 
     def to_string(self) -> str:
-        """Replicate toString() output from JLox"""
+        """Replicate `toString()` output from JLox."""
         attributes = f"{self.lexeme} {str(self.literal).replace('None', 'null')}"
         return f"{str(self.token_type)[10:]} {attributes}"
 

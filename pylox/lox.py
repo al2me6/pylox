@@ -2,9 +2,9 @@ import argparse
 import sys
 
 from pylox.error import LoxErrorHandler, LoxExit
+from pylox.interpreter import Interpreter
 from pylox.parser import Parser
 from pylox.scanner import Scanner
-from pylox.interpreter import Interpreter
 
 # pylint: disable=unused-variable
 
@@ -40,7 +40,6 @@ class Lox:
         if self.args.source:
             self.run_file()
         else:
-            sys.stdin.flush()  # piping must be explicitly indicated with "-"
             self.run_interactive()
 
     def run_file(self) -> None:
@@ -56,19 +55,17 @@ class Lox:
                 self.run(input(self.PROMPT_CHARACTER))
             except LoxExit:
                 continue
-            except (KeyboardInterrupt, EOFError):  # exit gracefully on ctrl-c or ctrl-d
+            except (KeyboardInterrupt, EOFError):  # Exit gracefully on ctrl-c or ctrl-d.
                 sys.exit(0)
 
     def run(self, source: str) -> None:
         self.error_handler.set_source(source)
-        # scan
         scanner = Scanner(
             source,
             self.error_handler,
             dump=self.args.dump in ("tokens", "all")
         )
         tokens = scanner.scan_tokens()
-        # parse, if there were no errors
         self.error_handler.checkpoint()
         parser = Parser(
             tokens,
@@ -76,7 +73,6 @@ class Lox:
             dump=self.args.dump in ("ast", "all")
         )
         expression = parser.parse()
-        # interpret if there were no errors
         self.error_handler.checkpoint()
         interpreter = Interpreter(self.error_handler)
         assert expression is not None

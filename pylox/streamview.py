@@ -1,4 +1,4 @@
-from __future__ import annotations  # reference the parent class in methods
+from __future__ import annotations  # Reference the parent class in methods' annotations.
 
 from typing import Any, Generic, Iterator, Optional, Sequence, TypeVar, overload
 
@@ -43,29 +43,12 @@ class StreamView(Generic[T]):
         return self._fallthrough(index) < len(self)
 
     def set_marker(self, index: Optional[int] = None) -> None:
+        """Place a marker at the current (or a specified) index,
+        for use by `get_slice_from_marker()`."""
         self.marker_index = self._fallthrough(index)
 
     def unset_marker(self) -> None:
         self.marker_index = None
-
-    def advance(self) -> T:
-        """Consume the next value if there is one, and return it"""
-        if (next_item := self.peek()) is not None:
-            self.current_index += 1
-            return next_item
-        raise IndexError("Items have been exhausted.")
-
-    def match(self, *expected: Any) -> bool:
-        if self.peek() in expected:
-            return True
-        return False
-
-    def advance_if_match(self, *expected: Any) -> bool:
-        """Test if the next value is as expected. If so, consume it."""
-        if self.match(*expected):
-            self.current_index += 1
-            return True
-        return False
 
     def peek(self, lookahead: int = 0) -> Optional[T]:
         """Return the value `lookahead` from the next one, if there is one."""
@@ -80,6 +63,26 @@ class StreamView(Generic[T]):
         res = self.peek(lookahead)
         assert res is not None
         return res
+
+    def match(self, *expected: Any) -> bool:
+        """Test if the next value is one of the `expected` values."""
+        if self.peek() in expected:
+            return True
+        return False
+
+    def advance(self) -> T:
+        """Consume the next value if there is one and return it."""
+        if (next_item := self.peek()) is not None:
+            self.current_index += 1
+            return next_item
+        raise IndexError("Items have been exhausted.")
+
+    def advance_if_match(self, *expected: Any) -> bool:
+        """Test if the next value is one of the `expected` values. If so, consume it."""
+        if self.match(*expected):
+            self.advance()
+            return True
+        return False
 
     @overload
     def get_slice_from_marker(self: StreamView[str]) -> str: pass

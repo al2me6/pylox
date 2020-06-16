@@ -1,6 +1,6 @@
 from typing import List, Optional, Set
 
-# pylint: disable=unused-wildcard-import  # somehow it decides to import the file's own import statements?
+# pylint: disable=unused-wildcard-import  # Somehow it decides to import the file's own import statements?
 from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.expr import *
 from pylox.stmt import *
@@ -34,7 +34,7 @@ class Parser:
                 dump_internal("AST", parsed_tree)
             return parsed_tree
 
-    # ~~~ helper functions ~~~
+    # ~~~ Helper functions ~~~
 
     def _expect_next(self, expected: Set[TT], message: str) -> Token:
         if self._tv.match(*expected):
@@ -52,7 +52,7 @@ class Parser:
             self._tv.advance()
         return
 
-    # ~~~ expression parsers ~~~
+    # ~~~ Expression parsers ~~~
 
     def _expression(self) -> Expr:
         return self._equality()
@@ -113,7 +113,7 @@ class Parser:
                 TT.NIL: lambda: None,
                 TT.NUMBER: lambda: self._tv.peek_unwrap().literal,
                 TT.STRING: lambda: self._tv.peek_unwrap().literal,
-            }[self._tv.peek().token_type]()  # type: ignore  # peek() -> None covered by except AttributeError
+            }[self._tv.peek().token_type]()  # type: ignore  # peek() -> None covered by except AttributeError.
         except (KeyError, AttributeError):
             pass
         else:

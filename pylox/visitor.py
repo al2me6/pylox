@@ -1,4 +1,4 @@
-from __future__ import annotations  # circular references in annotations
+from __future__ import annotations  # Circular references in annotations.
 
 from abc import ABC
 from typing import Any
@@ -19,6 +19,7 @@ class Visitor(ABC):
     """
 
     def visit(self, visitable: Visitable) -> Any:
+        """Attempt to find and call the correct visitor function."""
         visitable_name = type(visitable).__name__
         if impl := getattr(type(self), f"_visit_{visitable_name}__", None):
             return impl(self, visitable)
