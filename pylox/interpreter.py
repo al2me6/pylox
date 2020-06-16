@@ -80,7 +80,7 @@ class Interpreter(Visitor):
         """Evaluate a group by evaluating the expression contained within."""
         return self._evaluate(expr.expression)
 
-    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> LoxLiteral:
+    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Any:
         """Evaluate the operand and then apply the correct unary operation.
 
         There are two unary operations: logical negation and arithmetic negation."""
@@ -92,8 +92,7 @@ class Interpreter(Visitor):
             self._expect_number_operand(expr.operator, right)
             return -right
 
-        assert NOT_REACHED
-        return None
+        raise NOT_REACHED
 
     def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Any:
         """Evaluate the two operands, ensure that their types match, and finally
@@ -128,5 +127,4 @@ class Interpreter(Visitor):
                 self._expect_number_operand(expr.operator, left, right)
             return switch[case](left, right)
 
-        assert NOT_REACHED
-        return None
+        raise NOT_REACHED

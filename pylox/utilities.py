@@ -17,4 +17,4 @@ def eprint(*args, **kwargs) -> None:
     print(*args, **kwargs)
 
 
-NOT_REACHED = False  # For use with assert to force AssertionError.
+NOT_REACHED = AssertionError("Unreachable code reached")
