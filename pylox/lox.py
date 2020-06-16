@@ -1,5 +1,4 @@
 import sys
-from functools import reduce
 
 from pylox.error import LoxErrorHandler, LoxExit
 from pylox.interpreter import Interpreter
@@ -40,9 +39,9 @@ class Lox:
             dump=bool(self.debug_flags & Debug.DUMP_TOKENS)
         ).scan_tokens()
 
+        self.error_handler.checkpoint()
         if (self.debug_flags & Debug.NO_PARSE):
             sys.exit(0)
-        self.error_handler.checkpoint()
         expression = Parser(
             tokens,
             self.error_handler,
