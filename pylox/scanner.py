@@ -10,21 +10,18 @@ from pylox.utilities import dump_internal
 
 
 def _is_arabic_numeral(char: Optional[str]) -> bool:
-    """Check if `char` is an Arabic numeral."""
     if char is None:
         return False
     return char in "1234567890"
 
 
 def _is_valid_identifier_start(char: Optional[str]) -> bool:
-    """Check if `char` is allowable as the first letter of an identifier."""
     if char is None:
         return False
     return char.isalpha() or char == "_"
 
 
 def _is_valid_identifier_name(char: Optional[str]) -> bool:
-    """Check if `char` can occur inside an identifier name."""
     if char is None:
         return False
     return _is_valid_identifier_start(char) or char.isdigit()
