@@ -22,7 +22,7 @@ if __name__ == "__main__":
         "--dbg",
         choices=tuple(option.name for option in Debug),
         action="append",
-        help="pylox debugging options"
+        help="pylox debugging options, multiple --dbg arguments can be passed"
     )
     (args, extra_args) = parser.parse_known_args()
 
