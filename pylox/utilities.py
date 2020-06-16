@@ -1,5 +1,6 @@
 import sys
-from typing import Any
+from enum import Flag, auto
+from typing import Any, Iterator
 
 HEADING_LENGTH = 20
 
@@ -15,6 +16,13 @@ def eprint(*args, **kwargs) -> None:
     """`print()` to stderr."""
     kwargs["file"] = sys.stderr
     print(*args, **kwargs)
+
+
+class Debug(Flag):
+    DUMP_TOKENS = auto()
+    DUMP_AST = auto()
+    NO_PARSE = auto()
+    NO_INTERPRET = auto()
 
 
 NOT_REACHED = AssertionError("Unreachable code reached")

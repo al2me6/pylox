@@ -1,6 +1,9 @@
 if __name__ == "__main__":
     import argparse
+    from functools import reduce
+
     from pylox.lox import Lox
+    from pylox.utilities import Debug
 
     parser = argparse.ArgumentParser(
         prog="pylox",
@@ -16,14 +19,14 @@ if __name__ == "__main__":
         help="the .lox file to interpret, default to interactive mode"
     )
     parser.add_argument(
-        "--dump",
-        choices=Lox.DUMP_OPTIONS,
-        metavar="|".join(Lox.DUMP_OPTIONS),
-        help="dump the internal state of the interpreter"
+        "--dbg",
+        choices=tuple(option.name for option in Debug),
+        action="append",
+        help="pylox debugging options"
     )
     (args, extra_args) = parser.parse_known_args()
 
-    lox = Lox(dump_option=args.dump)
+    lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug(0)))
     if args.source:
         lox.run_file(args.source)
     else:
