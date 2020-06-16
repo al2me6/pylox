@@ -44,6 +44,8 @@ def _to_text(obj: Any) -> str:
     text = str(obj)
     if isinstance(obj, float) and text.endswith(".0"):
         text = text[-3]  # Output 100.0 as 100, etc.
+    elif isinstance(obj, bool):
+        text = text.lower()  # Convert "True" to "true", etc.
     return text
 
 
@@ -68,7 +70,7 @@ class Interpreter(Visitor):
         """Enforce that the `operand`s passed are numbers. Otherwise,
         emit an error at the given `operator` token."""
         if not _check_types({float}, *operand):
-            raise LoxRuntimeError.at_token(operator, "Operands must be numbers", fatal=True)
+            raise LoxRuntimeError.at_token(operator, "Operands must be numbers.", fatal=True)
 
     # ~~~ Interpreters ~~~
 
@@ -98,8 +100,8 @@ class Interpreter(Visitor):
         """Evaluate the two operands, ensure that their types match, and finally
         apply the correct binary operation.
 
-        The binary operations include comparisons and the four arithmetic operations
-        on numbers, and string concatenation."""
+        The binary operations include comparisons, the four arithmetic operations,
+        and string concatenation."""
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
 
@@ -120,7 +122,7 @@ class Interpreter(Visitor):
                 if not _check_types({float, str}, left, right):
                     raise LoxRuntimeError.at_token(
                         expr.operator,
-                        "Operands must both be numbers or both be strings",
+                        "Operands must both be numbers or both be strings.",
                         fatal=True
                     )
             else:
