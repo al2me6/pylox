@@ -21,12 +21,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dbg",
         choices=tuple(option.name for option in Debug),
+        default=list(),
         action="append",
         help="pylox debugging options, multiple --dbg arguments can be passed"
     )
     (args, extra_args) = parser.parse_known_args()
 
-    lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug(0)))
+    lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug(0)))  # Collapse all flags passed.
     if args.source:
         lox.run_file(args.source)
     else:
