@@ -36,7 +36,7 @@ class Lox:
         tokens = Scanner(
             source,
             self.error_handler,
-            dump=bool(self.debug_flags & Debug.DUMP_TOKENS)
+            debug_flags=self.debug_flags
         ).scan_tokens()
 
         self.error_handler.checkpoint()

@@ -23,6 +23,7 @@ class Debug(Flag):
     DUMP_AST = auto()
     NO_PARSE = auto()
     NO_INTERPRET = auto()
+    JAVA_STYLE_TOKENS = auto()
 
 
 NOT_REACHED = AssertionError("Unreachable code reached")

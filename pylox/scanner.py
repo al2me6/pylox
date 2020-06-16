@@ -4,7 +4,7 @@ from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.streamview import StreamView
 from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, LiteralValue, Token
 from pylox.token import TokenType as TT
-from pylox.utilities import dump_internal
+from pylox.utilities import dump_internal, Debug
 
 # ~~~ Helper functions ~~~
 
@@ -33,7 +33,7 @@ class Scanner:
             source: str,
             error_handler: LoxErrorHandler,
             *,
-            dump: bool = False
+            debug_flags: Debug
     ) -> None:
         """Produce a list of Tokens from a source string.
 
@@ -47,7 +47,7 @@ class Scanner:
         self._tokens: List[Token] = list()
         self._sv = StreamView(source)
         self._error_handler = error_handler
-        self._dump = dump
+        self._debug_flags = debug_flags
 
     def scan_tokens(self) -> List[Token]:
         """Scan all tokens in the source stream."""
@@ -59,8 +59,11 @@ class Scanner:
         self._sv.set_marker()
         self._add_token(TT.EOF)
 
-        if self._dump:
-            dump_internal("Token", *self._tokens)
+        if self._debug_flags & Debug.DUMP_TOKENS:
+            if self._debug_flags & Debug.JAVA_STYLE_TOKENS:  # Replicate JLox output.
+                print(*(token.to_string() for token in self._tokens), sep="\n")
+            else:
+                dump_internal("Token", *self._tokens)
 
         return self._tokens
 
@@ -86,7 +89,7 @@ class Scanner:
         elif _is_valid_identifier_start(char):
             next_token = self._identifier_helper()
         else:  # What remains is an error.
-            self._error_handler.err(LoxSyntaxError(self._sv.current_index, "Unexpected character"))
+            self._error_handler.err(LoxSyntaxError(self._sv.current_index, "Unexpected character."))
 
         if next_token:  # Handle no-ops.
             if isinstance(next_token, tuple):  # Handle types that have literals.
@@ -119,7 +122,7 @@ class Scanner:
             self._error_handler.err(
                 LoxSyntaxError(
                     self._sv.current_index,
-                    "Unterminated string",
+                    "Unterminated string.",
                     length=self._sv.current_index - self._sv.marker_index
                 )
             )
