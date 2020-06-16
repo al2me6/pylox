@@ -16,6 +16,7 @@ class Lox:
     def __init__(self, debug_flags: Debug = Debug(0)) -> None:
         self.error_handler = LoxErrorHandler()
         self.debug_flags = debug_flags
+        self.interpreter = Interpreter(self.error_handler)
 
     def run_file(self, path: str) -> None:
         with open(path, 'r') as fil:
@@ -32,24 +33,24 @@ class Lox:
 
     def run(self, source: str) -> None:
         self.error_handler.set_source(source)
-        scanner = Scanner(
+
+        tokens = Scanner(
             source,
             self.error_handler,
             dump=bool(self.debug_flags & Debug.DUMP_TOKENS)
-        )
-        tokens = scanner.scan_tokens()
+        ).scan_tokens()
+
         if (self.debug_flags & Debug.NO_PARSE):
             sys.exit(0)
         self.error_handler.checkpoint()
-        parser = Parser(
+        expression = Parser(
             tokens,
             self.error_handler,
             dump=bool(self.debug_flags & Debug.DUMP_AST)
-        )
-        expression = parser.parse()
+        ).parse()
+
         self.error_handler.checkpoint()
         if (self.debug_flags & Debug.NO_INTERPRET):
             sys.exit(0)
-        interpreter = Interpreter(self.error_handler)
-        assert expression is not None
-        interpreter.interpret(expression)
+        if expression is not None:
+            self.interpreter.interpret(expression)
