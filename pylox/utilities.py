@@ -1,6 +1,6 @@
 import sys
 from enum import Flag, auto
-from typing import Any, Iterator
+from typing import Any
 
 HEADING_LENGTH = 20
 
