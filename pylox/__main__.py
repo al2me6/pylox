@@ -11,12 +11,19 @@ if __name__ == "__main__":
         allow_abbrev=False
     )
     parser.add_argument(
+        "-c",
+        metavar="STRING",
+        type=str,
+        required=False,
+        help="source string to execute"
+    )
+    parser.add_argument(
         "source",
         metavar="FILE",
         nargs="?",
         type=str,
         default=None,
-        help="the .lox file to interpret, default to interactive mode"
+        help="the .lox file to interpret"
     )
     parser.add_argument(
         "--dbg",
@@ -25,10 +32,12 @@ if __name__ == "__main__":
         action="append",
         help="pylox debugging options, multiple --dbg arguments can be passed"
     )
-    (args, extra_args) = parser.parse_known_args()
+    args, extra_args = parser.parse_known_args()
 
     lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug(0)))  # Collapse all flags passed.
-    if args.source:
+    if args.c:
+        lox.run(args.c)
+    elif args.source:
         lox.run_file(args.source)
     else:
         lox.run_interactive()
