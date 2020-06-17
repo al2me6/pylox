@@ -7,8 +7,7 @@ from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.expr import *
 from pylox.stmt import *
 from pylox.streamview import StreamView
-from pylox.token import Token
-from pylox.token import TokenType as TT
+from pylox.token import Tk, Token
 from pylox.utilities import NOT_REACHED, dump_internal
 
 
@@ -30,17 +29,17 @@ class Prec(IntEnum):
 
 
 INFIX_OPERATION_PRECEDENCE = {
-    TT.STAR: Prec.FACTOR,
-    TT.SLASH: Prec.FACTOR,
-    TT.PLUS: Prec.TERM,
-    TT.MINUS: Prec.TERM,
-    TT.GREATER: Prec.COMPARISON,
-    TT.GREATER_EQUAL: Prec.COMPARISON,
-    TT.LESS: Prec.COMPARISON,
-    TT.LESS_EQUAL: Prec.COMPARISON,
-    TT.EQUAL_EQUAL: Prec.EQUALITY,
-    TT.BANG_EQUAL: Prec.EQUALITY,
-    TT.EQUAL: Prec.ASSIGNMENT,
+    Tk.STAR: Prec.FACTOR,
+    Tk.SLASH: Prec.FACTOR,
+    Tk.PLUS: Prec.TERM,
+    Tk.MINUS: Prec.TERM,
+    Tk.GREATER: Prec.COMPARISON,
+    Tk.GREATER_EQUAL: Prec.COMPARISON,
+    Tk.LESS: Prec.COMPARISON,
+    Tk.LESS_EQUAL: Prec.COMPARISON,
+    Tk.EQUAL_EQUAL: Prec.EQUALITY,
+    Tk.BANG_EQUAL: Prec.EQUALITY,
+    Tk.EQUAL: Prec.ASSIGNMENT,
 }
 
 
@@ -80,11 +79,11 @@ class Parser:
 
     def _has_next(self) -> bool:
         if self._tv.has_next():
-            if self._tv.peek() != TT.EOF:
+            if self._tv.peek() != Tk.EOF:
                 return True
         return False
 
-    def _expect_next(self, expected: Set[TT], message: str) -> Token:
+    def _expect_next(self, expected: Set[Tk], message: str) -> Token:
         if self._tv.match(*expected):
             return self._tv.advance()
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message, fatal=True)
@@ -93,9 +92,9 @@ class Parser:
         self._tv.advance()
         while self._has_next():
             prev = self._tv.peek_unwrap(-1)
-            if prev.token_type is TT.SEMICOLON:
+            if prev.token_type is Tk.SEMICOLON:
                 return
-            if self._tv.match(TT.CLASS, TT.FUN, TT.VAR, TT.FOR, TT.IF, TT.WHILE, TT.PRINT, TT.RETURN):
+            if self._tv.match(Tk.CLASS, Tk.FUN, Tk.VAR, Tk.FOR, Tk.IF, Tk.WHILE, Tk.PRINT, Tk.RETURN):
                 return
             self._tv.advance()
         return
@@ -106,13 +105,13 @@ class Parser:
         # Parse prefix operators.
         token = self._tv.advance()
         left: Expr
-        if (token_type := token.token_type) is TT.LEFT_PAREN:
+        if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression(Prec.ASSIGNMENT)
-            self._expect_next({TT.RIGHT_PAREN}, "Expected ')' after expression.")
+            self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
             left = GroupingExpr(enclosed)
-        elif token_type in {TT.MINUS, TT.BANG}:
+        elif token_type in {Tk.MINUS, Tk.BANG}:
             left = UnaryExpr(token, self._expression(Prec.FACTOR))
-        elif token_type in {TT. STRING, TT.NUMBER}:
+        elif token_type in {Tk. STRING, Tk.NUMBER}:
             left = LiteralExpr(token.literal)
         else:
             raise LoxSyntaxError.at_token(token, "Expected expression.", fatal=True)

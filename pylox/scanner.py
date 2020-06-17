@@ -2,9 +2,8 @@ from typing import List, Optional, Tuple, Union
 
 from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.streamview import StreamView
-from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, LiteralValue, Token
-from pylox.token import TokenType as TT
-from pylox.utilities import dump_internal, Debug
+from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, LiteralValue, Tk, Token
+from pylox.utilities import Debug, dump_internal
 
 # ~~~ Helper functions ~~~
 
@@ -57,7 +56,7 @@ class Scanner:
             self._scan_token()
         # Mark the end of the stream.
         self._sv.set_marker()
-        self._add_token(TT.EOF)
+        self._add_token(Tk.EOF)
 
         if self._debug_flags & Debug.DUMP_TOKENS:
             if self._debug_flags & Debug.JAVA_STYLE_TOKENS:  # Replicate JLox output.
@@ -70,14 +69,14 @@ class Scanner:
     def _scan_token(self) -> None:
         """Scan the source stream for the next token and add it to the list"""
         char = self._sv.advance()
-        next_token: Union[TT, Tuple[TT, LiteralValue], None] = None
+        next_token: Union[Tk, Tuple[Tk, LiteralValue], None] = None
 
         # Match compound tokens before similar single-character versions.
         if (doublet := char + str(self._sv.peek())) in COMPOUND_TOKENS:  # pylint: disable=superfluous-parens
-            next_token = TT(doublet)
+            next_token = Tk(doublet)
             self._sv.advance()
         elif char in SINGLE_CHAR_TOKENS:
-            next_token = TT(char)
+            next_token = Tk(char)
         elif char == "/":
             next_token = self._slash_helper()
         elif char == '"':
@@ -97,23 +96,23 @@ class Scanner:
             else:
                 self._add_token(next_token)
 
-    def _add_token(self, token_type: TT, literal: LiteralValue = None) -> None:
+    def _add_token(self, token_type: Tk, literal: LiteralValue = None) -> None:
         """Add a new Token to the list using the passed type and optional literal value"""
         lexeme = self._sv.get_slice_from_marker()
         self._tokens.append(Token(token_type, lexeme, literal, self._sv.current_index))
 
     # ~~~ Helpers for specific token types ~~~
 
-    def _slash_helper(self) -> Optional[TT]:
+    def _slash_helper(self) -> Optional[Tk]:
         """Decide if the matched slash is division or a comment.
         Return a SLASH token or consume the comment."""
         if self._sv.advance_if_match("/"):  # A comment must be followed by another slash.
             while self._sv.peek() != "\n" and self._sv.has_next():  # A comment takes up the entire line.
                 self._sv.advance()
             return None  # No token to be produced this pass.
-        return TT.SLASH
+        return Tk.SLASH
 
-    def _string_helper(self) -> Optional[Tuple[TT, str]]:
+    def _string_helper(self) -> Optional[Tuple[Tk, str]]:
         """Consume an entire string."""
         while self._sv.peek() != '"' and self._sv.has_next():  # Test for unterminated string.
             self._sv.advance()  # Note that multi-line strings are allowed.
@@ -131,9 +130,9 @@ class Scanner:
         self._sv.advance()
         # Return the type and the the enclosed text, stripping the quotation marks.
         assert self._sv.marker_index is not None
-        return TT.STRING, self._sv[self._sv.marker_index + 1:self._sv.current_index - 1]
+        return Tk.STRING, self._sv[self._sv.marker_index + 1:self._sv.current_index - 1]
 
-    def _number_helper(self) -> Tuple[TT, float]:
+    def _number_helper(self) -> Tuple[Tk, float]:
         """Consume an entire number."""
         while _is_arabic_numeral(self._sv.peek()):
             self._sv.advance()
@@ -144,18 +143,18 @@ class Scanner:
             while _is_arabic_numeral(self._sv.peek()):  # Consume any digits after the decimal point.
                 self._sv.advance()
         # Parse the value of the number directly with Python.
-        return TT.NUMBER, float(self._sv.get_slice_from_marker())
+        return Tk.NUMBER, float(self._sv.get_slice_from_marker())
 
-    def _identifier_helper(self) -> TT:
+    def _identifier_helper(self) -> Tk:
         """Consume an entire identifier and decide if it is a keyword."""
         while _is_valid_identifier_name(self._sv.peek()):
             self._sv.advance()
         # Add a keyword token if it is one, or an identifier otherwise.
         name = self._sv.get_slice_from_marker()
         try:
-            return TT(f"@{name.upper()}")  # Keywords have enum values in the form "@KEYWORD".
+            return Tk(f"@{name.upper()}")  # Keywords have enum values in the form "@KEYWORD".
         except ValueError:
-            return TT.IDENTIFIER
+            return Tk.IDENTIFIER
 
 
 __all__ = ("Scanner",)

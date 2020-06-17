@@ -4,8 +4,7 @@ from typing import Any, Set, Type
 
 from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
-from pylox.token import Token
-from pylox.token import TokenType as TT
+from pylox.token import Tk, Token
 from pylox.utilities import NOT_REACHED
 from pylox.visitor import Visitor
 
@@ -89,9 +88,9 @@ class Interpreter(Visitor):
         There are two unary operations: logical negation and arithmetic negation."""
         right = self._evaluate(expr.right)
 
-        if (op := expr.operator.token_type) is TT.BANG:
+        if (op := expr.operator.token_type) is Tk.BANG:
             return not _truthiness(right)
-        if op is TT.MINUS:
+        if op is Tk.MINUS:
             self._expect_number_operand(expr.operator, right)
             return -right
 
@@ -107,19 +106,19 @@ class Interpreter(Visitor):
         right = self._evaluate(expr.right)
 
         ops = {
-            TT.PLUS: add,
-            TT.MINUS: sub,
-            TT.STAR: mul,
-            TT.SLASH: truediv,
-            TT.GREATER: gt,
-            TT.GREATER_EQUAL: ge,
-            TT.LESS: lt,
-            TT.LESS_EQUAL: le,
-            TT.EQUAL_EQUAL: _equality,
-            TT.BANG_EQUAL: lambda left, right: not _equality(left, right),
+            Tk.PLUS: add,
+            Tk.MINUS: sub,
+            Tk.STAR: mul,
+            Tk.SLASH: truediv,
+            Tk.GREATER: gt,
+            Tk.GREATER_EQUAL: ge,
+            Tk.LESS: lt,
+            Tk.LESS_EQUAL: le,
+            Tk.EQUAL_EQUAL: _equality,
+            Tk.BANG_EQUAL: lambda left, right: not _equality(left, right),
         }
         if (op := expr.operator.token_type) in ops:
-            if op is TT.PLUS:  # Used for both arithmetic addition and string concatenation.
+            if op is Tk.PLUS:  # Used for both arithmetic addition and string concatenation.
                 if not _check_types({float, str}, left, right):
                     raise LoxRuntimeError.at_token(
                         expr.operator,

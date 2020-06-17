@@ -3,7 +3,7 @@ from enum import Enum, auto
 from typing import Any, Iterator, Optional, Union
 
 
-class TokenType(Enum):
+class Tk(Enum):
     # single-char
     LEFT_PAREN = "("
     RIGHT_PAREN = ")"
@@ -57,8 +57,8 @@ class TokenType(Enum):
 
 # auto() variants have integer values. Filter the remaining values by length to isolate the target ones.
 # THIS IS FRAGILE CODE: addition single-character keywords or three-character symbols will break this.
-SINGLE_CHAR_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 1, TokenType.iter_values()))
-COMPOUND_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 2, TokenType.iter_values()))
+SINGLE_CHAR_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 1, Tk.iter_values()))
+COMPOUND_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 2, Tk.iter_values()))
 
 
 LiteralValue = Union[str, float]
@@ -68,7 +68,7 @@ LiteralValue = Union[str, float]
 class Token:
     """A representation of a token. Note that offset is counted as the number of characters
     between the start of the source code and the end of the token's lexeme."""
-    token_type: TokenType
+    token_type: Tk
     lexeme: str
     literal: Optional[LiteralValue]
     offset: int
@@ -78,7 +78,7 @@ class Token:
 
         i.e., a `Token` of type `FOO` is equal to `TokenType.FOO`. This provides better
         ergonomics when used with `StreamView`, given the use-case of Token."""
-        if isinstance(other, TokenType):
+        if isinstance(other, Tk):
             return self.token_type is other
         return super().__eq__(other)
 
