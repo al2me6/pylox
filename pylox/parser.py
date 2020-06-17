@@ -125,7 +125,7 @@ class Parser:
             token_type = token.token_type
             if INFIX_OPERATION_PRECEDENCE[token_type] <= min_precedence:
                 break
-            if token in INFIX_OPERATION_PRECEDENCE:
+            if token_type in INFIX_OPERATION_PRECEDENCE:
                 left = BinaryExpr(left, token, self._expression(INFIX_OPERATION_PRECEDENCE[token_type]))
 
         return left
