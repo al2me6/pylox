@@ -1,3 +1,4 @@
+from functools import singledispatchmethod
 from operator import add, ge, gt, le, lt, mul, sub, truediv
 from typing import Any, Set, Type
 
@@ -88,9 +89,9 @@ class Interpreter(Visitor):
         There are two unary operations: logical negation and arithmetic negation."""
         right = self._evaluate(expr.right)
 
-        if (case := expr.operator.token_type) is TT.BANG:
+        if (op := expr.operator.token_type) is TT.BANG:
             return not _truthiness(right)
-        if case is TT.MINUS:
+        if op is TT.MINUS:
             self._expect_number_operand(expr.operator, right)
             return -right
 
@@ -105,7 +106,7 @@ class Interpreter(Visitor):
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
 
-        switch = {
+        ops = {
             TT.PLUS: add,
             TT.MINUS: sub,
             TT.STAR: mul,
@@ -117,8 +118,8 @@ class Interpreter(Visitor):
             TT.EQUAL_EQUAL: _equality,
             TT.BANG_EQUAL: lambda left, right: not _equality(left, right),
         }
-        if (case := expr.operator.token_type) in switch:
-            if case is TT.PLUS:  # Used for both arithmetic addition and string concatenation.
+        if (op := expr.operator.token_type) in ops:
+            if op is TT.PLUS:  # Used for both arithmetic addition and string concatenation.
                 if not _check_types({float, str}, left, right):
                     raise LoxRuntimeError.at_token(
                         expr.operator,
@@ -127,6 +128,6 @@ class Interpreter(Visitor):
                     )
             else:
                 self._expect_number_operand(expr.operator, left, right)
-            return switch[case](left, right)
+            return ops[op](left, right)
 
         raise NOT_REACHED
