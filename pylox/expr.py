@@ -50,4 +50,12 @@ class UnaryExpr(Expr):
     right: Expr
 
 
-__all__ = ("LoxLiteral", "Expr", "BinaryExpr", "GroupingExpr", "LiteralExpr", "UnaryExpr",)
+@dataclass
+class VariableExpr(Expr):
+    name: Token
+
+
+@dataclass
+class AssignmentExpr(Expr):
+    name: Token
+    value: Expr

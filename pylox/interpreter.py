@@ -1,8 +1,11 @@
+from contextlib import contextmanager
 from operator import add, ge, gt, le, lt, mul, sub, truediv
-from typing import Any, Set, Type
+from typing import Any, List, Set, Type
 
+from pylox.environment import Environment
 from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
+from pylox.stmt import *
 from pylox.token import Tk, Token
 from pylox.utilities import NOT_REACHED
 from pylox.visitor import Visitor
@@ -53,14 +56,19 @@ class Interpreter(Visitor):
 
     def __init__(self, error_handler: LoxErrorHandler) -> None:
         self._error_handler = error_handler
+        self._environment = Environment()
 
-    def interpret(self, expr: Expr) -> None:
+    def interpret(self, stmts: List[Stmt]) -> None:
         try:
-            print(_to_text(self._evaluate(expr)))
+            for stmt in stmts:
+                self._execute(stmt)
         except LoxRuntimeError as error:
             self._error_handler.err(error)
 
     # ~~~ Helper functions ~~~
+
+    def _execute(self, stmt: Stmt) -> None:
+        stmt.accept(self)
 
     def _evaluate(self, expr: Expr) -> Any:
         return expr.accept(self)
@@ -77,7 +85,34 @@ class Interpreter(Visitor):
         if not _check_types({float, str}, *operand):
             raise LoxRuntimeError.at_token(operator, "Operands must both be numbers or both be strings.", fatal=True)
 
-    # ~~~ Interpreters ~~~
+    @contextmanager
+    def sub_environment(self):
+        # TODO: verify ownership
+        outer = self._environment
+        self._environment = Environment(outer)
+        yield
+        self._environment = outer
+
+    # ~~~ Statement interpreters ~~~
+
+    def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
+        self._evaluate(stmt.expression)
+
+    def _visit_PrintStmt__(self, stmt: PrintStmt) -> None:
+        print(_to_text(self._evaluate(stmt.expression)))
+
+    def _visit_VarStmt__(self, stmt: VarStmt) -> None:
+        value: Any = None
+        if stmt.initializer is not None:
+            value = self._evaluate(stmt.initializer)
+        self._environment.define(stmt.name.lexeme, value)
+
+    def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
+        with self.sub_environment():
+            for inner_stmt in stmt.statements:
+                self._execute(inner_stmt)
+
+    # ~~~ Expression interpreters ~~~
 
     def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
         """A literal is evaluated by extracting its value."""
@@ -134,3 +169,11 @@ class Interpreter(Visitor):
             return ops[op](left, right)  # type: ignore  # mypy is confused by the multiple signatures of pow()
 
         raise NOT_REACHED
+
+    def _visit_VariableExpr__(self, expr: VariableExpr) -> Any:
+        return self._environment.get(expr.name)
+
+    def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> Any:
+        value = self._evaluate(expr.value)
+        self._environment.assign(expr.name, value)
+        return value

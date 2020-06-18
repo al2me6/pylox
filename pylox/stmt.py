@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from typing import List, Optional
 
 from pylox.expr import Expr
 from pylox.token import Token
@@ -25,4 +26,19 @@ class PrintStmt(Stmt):
     expression: Expr
 
 
-__all__ = ("Stmt", "ExpressionStmt", "PrintStmt",)
+@dataclass
+class VarStmt(Stmt):
+    name: Token
+    initializer: Optional[Expr]
+
+
+@dataclass
+class BlockStmt(Stmt):
+    statements: List[Stmt]
+
+    def __str__(self) -> str:
+        inner_text = ""
+        for inner_stmt in self.statements:
+            for line in str(inner_stmt).splitlines():
+                inner_text += f"\t{line}\n"
+        return f"<block:\n{inner_text}>"

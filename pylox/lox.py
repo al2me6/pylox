@@ -6,8 +6,6 @@ from pylox.parser import Parser
 from pylox.scanner import Scanner
 from pylox.utilities import Debug
 
-# pylint: disable=unused-variable
-
 
 class Lox:
     PROMPT_CHARACTER = ">>> "
@@ -42,7 +40,7 @@ class Lox:
         self.error_handler.checkpoint()
         if self.debug_flags & Debug.NO_PARSE:
             sys.exit(0)
-        expression = Parser(
+        statements = Parser(
             tokens,
             self.error_handler,
             dump=bool(self.debug_flags & Debug.DUMP_AST)
@@ -51,4 +49,4 @@ class Lox:
         self.error_handler.checkpoint()
         if self.debug_flags & Debug.NO_INTERPRET:
             sys.exit(0)
-        self.interpreter.interpret(expression)
+        self.interpreter.interpret(statements)
