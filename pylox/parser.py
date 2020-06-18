@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import IntEnum, auto
 from typing import List, Set
 
@@ -25,11 +23,8 @@ class Prec(IntEnum):
     CALL = auto()
     PRIMARY = auto()
 
-    def as_right_associative(self) -> Prec:
-        return self.__class__(self.value - 1)
 
-
-INFIX_OPERATION_PRECEDENCE = {
+INFIX_OPERATOR_PRECEDENCE = {
     Tk.STAR_STAR: Prec.EXP,
     Tk.STAR: Prec.FACTOR,
     Tk.SLASH: Prec.FACTOR,
@@ -43,6 +38,16 @@ INFIX_OPERATION_PRECEDENCE = {
     Tk.BANG_EQUAL: Prec.EQUALITY,
     Tk.EQUAL: Prec.ASSIGNMENT,
 }
+
+RIGHT_ASSOCIATIVE_OPERATORS = {
+    Tk.EQUAL,
+}
+
+
+def _get_infix_operator_precedence_by_associativity(op: Tk, prec: Prec) -> Prec:
+    if op in RIGHT_ASSOCIATIVE_OPERATORS:
+        return Prec(prec.value - 1)
+    return prec
 
 
 class Parser:
@@ -108,7 +113,7 @@ class Parser:
         token = self._tv.advance()
         left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
-            enclosed = self._expression(Prec.ASSIGNMENT)
+            enclosed = self._expression()
             self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
@@ -120,18 +125,18 @@ class Parser:
 
         # Parse the "right hand side".
         while self._has_next():
-            token = self._tv.peek_unwrap()
-            token_type = token.token_type
+            op = self._tv.peek_unwrap()
+            op_type = op.token_type
             # Parse infix operators.
-            if (prec := INFIX_OPERATION_PRECEDENCE.get(token_type)):  # Check if the operator is valid.
+            if (prec := INFIX_OPERATOR_PRECEDENCE.get(op_type)):  # Check if the operator is valid.
                 # Check if it has high enough precedence for its expression to be parsed as an
                 # operand of the "parent" half-parsed expression.
                 if prec <= min_precedence:
                     break
-                # If so, consume and parse it.
+                # Consume and parse the RHS with the appropriate associativity.
                 self._tv.advance()
-                right = self._expression(prec)
-                left = BinaryExpr(token, left, right)
+                right = self._expression(_get_infix_operator_precedence_by_associativity(op_type, prec))
+                left = BinaryExpr(op, left, right)
             else:  # If it's not an operator, we're done.
                 break
 
