@@ -120,12 +120,15 @@ class Parser:
 
         # Parse infix operators.
         while self._has_next():
-            token = self._tv.advance()
+            token = self._tv.peek_unwrap()
             token_type = token.token_type
-            if INFIX_OPERATION_PRECEDENCE[token_type] <= min_precedence:
-                break
-            if token_type in INFIX_OPERATION_PRECEDENCE:
-                left = BinaryExpr(left, token, self._expression(INFIX_OPERATION_PRECEDENCE[token_type]))
+            if (prec := INFIX_OPERATION_PRECEDENCE.get(token_type)):
+                if prec <= min_precedence:
+                    break
+                self._tv.advance()
+                left = BinaryExpr(left, token, self._expression(prec))
+                continue
+            break
 
         return left
 
