@@ -1,6 +1,9 @@
 import sys
 from enum import Flag, auto
-from typing import Any
+from typing import Any, List, Tuple
+
+from pylox.token import Token
+
 
 def dump_internal(name: str, *content: Any) -> None:
     """Output each item in `content` with a fancy header."""
@@ -22,6 +25,17 @@ class Debug(Flag):
     NO_PARSE = auto()
     NO_INTERPRET = auto()
     JAVA_STYLE_TOKENS = auto()
+
+
+def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Tuple[str, ...]]:
+    simplified_name = type(obj).__name__.replace(base_name, "").lower()
+    values: List[str] = list()
+    for value in obj.__dict__.values():
+        if isinstance(value, Token):
+            values.append(value.lexeme)
+        else:
+            values.append(str(value))
+    return simplified_name, tuple(values)
 
 
 NOT_REACHED = AssertionError("Unreachable code reached")

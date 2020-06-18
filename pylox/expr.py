@@ -5,43 +5,18 @@ from dataclasses import dataclass
 from typing import Union
 
 from pylox.token import Token
-from pylox.visitor import Visitable, Visitor
+from pylox.utilities import ast_node_pretty_printer
+from pylox.visitor import Visitable
 
 LoxLiteral = Union[float, str, bool, None]
 
 
-class Expr(Visitor, Visitable, ABC):
-    """Base class for expressions which have differing attributes.
-
-    Implements Visitor<Expr> for production of nice debug output.
-    """
-    # pylint: disable=invalid-name
-
-    def _visit_BinaryExpr__(self, expr: BinaryExpr) -> str:
-        return self._render(expr.operator.lexeme, expr.left, expr.right)
-
-    def _visit_GroupingExpr__(self, expr: GroupingExpr) -> str:
-        return self._render("group", expr.expression)
-
-    def _visit_LiteralExpr__(self, expr: LiteralExpr) -> str:
-        if expr.value is None:  # The null type is "nil" in Lox.
-            return "nil"
-        return str(expr.value)
-
-    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> str:
-        return self._render(expr.operator.lexeme, expr.right)
-
-    def _render(self, name: str, *exprs: Expr) -> str:
-        # Recursively render sub-expressions.
-        sub_expressions = " ".join(map(str, exprs))
-        return f"({' '.join((name, sub_expressions))})"
+class Expr(Visitable, ABC):
+    """Base class for expressions which have differing attributes."""
 
     def __str__(self) -> str:
-        try:
-            return self.accept(self)  # Accepting an Expr triggers rendering.
-        except NotImplementedError:
-            simplified_name = type(self).__name__.replace("Expr", "").lower()
-            return f"({simplified_name} {' '.join(map(str, self.__dict__.values()))})"
+        name, values = ast_node_pretty_printer(self, "Expr")
+        return f"({name} {' '.join(values)})"
 
 
 @dataclass
@@ -49,6 +24,9 @@ class BinaryExpr(Expr):
     operator: Token
     left: Expr
     right: Expr
+
+    def __str__(self) -> str:
+        return f"({self.operator.lexeme} {self.left} {self.right})"
 
 
 @dataclass
@@ -59,6 +37,11 @@ class GroupingExpr(Expr):
 @dataclass
 class LiteralExpr(Expr):
     value: LoxLiteral
+
+    def __str__(self) -> str:
+        if self.value is None:  # The null type is "nil" in Lox.
+            return "nil"
+        return str(self.value)
 
 
 @dataclass
