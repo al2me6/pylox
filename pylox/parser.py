@@ -78,8 +78,7 @@ class Parser:
             dump_internal("AST", *self._statements)
         return self._statements
 
-    # ~~~
-    # helper functions ~~~
+    # ~~~ Helper functions ~~~
 
     def _has_next(self) -> bool:
         if self._tv.has_next():
