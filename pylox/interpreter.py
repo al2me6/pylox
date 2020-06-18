@@ -42,7 +42,7 @@ def _to_text(obj: Any) -> str:
         return "nil"  # The null type is "nil" in Lox.
     text = str(obj)
     if isinstance(obj, float) and text.endswith(".0"):
-        text = text[-3]  # Output 100.0 as 100, etc.
+        text = text[:-2]  # Output 100.0 as 100, etc.
     elif isinstance(obj, bool):
         text = text.lower()  # Convert "True" to "true", etc.
     return text
