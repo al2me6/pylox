@@ -93,7 +93,7 @@ class Token:
     def to_string(self) -> str:
         """Replicate `toString()` output from JLox."""
         attributes = f"{self.lexeme} {str(self.literal).replace('None', 'null')}"
-        return f"{str(self.token_type)[10:]} {attributes}"
+        return f"{self.token_type.name} {attributes}"
 
 
 __all__ = ("SINGLE_CHAR_TOKENS", "COMPOUND_TOKENS", "Token", "Tk", "LiteralValue",)
