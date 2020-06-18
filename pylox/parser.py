@@ -134,7 +134,7 @@ class Parser:
                 # operand of the "parent" half-parsed expression.
                 if prec <= min_precedence:
                     break
-                # Consume and parse the RHS with the appropriate associativity.
+                # Consume the operator and parse the RHS with the appropriate associativity.
                 self._tv.advance()
                 right = self._expression(_get_infix_operator_precedence_by_associativity(op_type, prec))
                 left = BinaryExpr(op, left, right)
