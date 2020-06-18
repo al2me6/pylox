@@ -104,15 +104,15 @@ class Parser:
     def _expression(self, min_precedence: Prec) -> Expr:
         # Parse prefix operators.
         token = self._tv.advance()
-        left: Expr
+        expr: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression(Prec.ASSIGNMENT)
             self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
-            left = GroupingExpr(enclosed)
+            expr = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
-            left = UnaryExpr(token, self._expression(Prec.FACTOR))
+            expr = UnaryExpr(token, self._expression(Prec.FACTOR))
         elif token_type in {Tk.FALSE, Tk.TRUE, Tk.NIL, Tk.NUMBER, Tk.STRING}:
-            left = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
+            expr = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
         else:
             raise LoxSyntaxError.at_token(token, "Expected expression.", fatal=True)
 
@@ -126,11 +126,11 @@ class Parser:
                 if prec <= min_precedence:
                     break
                 self._tv.advance()
-                left = BinaryExpr(left, token, self._expression(prec))
+                expr = BinaryExpr(expr, token, self._expression(prec))
                 continue
             break
 
-        return left
+        return expr
 
 
 __all__ = ("Parser",)
