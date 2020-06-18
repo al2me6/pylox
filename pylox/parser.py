@@ -109,10 +109,10 @@ class Parser:
             enclosed = self._expression(Prec.ASSIGNMENT)
             self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
             left = GroupingExpr(enclosed)
-        elif token_type in {Tk.MINUS, Tk.BANG}:
+        elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.FACTOR))
-        elif token_type in {Tk. STRING, Tk.NUMBER}:
-            left = LiteralExpr(token.literal)
+        elif token_type in {Tk.FALSE, Tk.TRUE, Tk.NIL, Tk.NUMBER, Tk.STRING}:
+            left = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
         else:
             raise LoxSyntaxError.at_token(token, "Expected expression.", fatal=True)
 
