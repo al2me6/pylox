@@ -33,14 +33,15 @@ class Expr(Visitor, Visitable, ABC):
 
     def _render(self, name: str, *exprs: Expr) -> str:
         # Recursively render sub-expressions.
-        sub_expressions = " ".join(expr.accept(self) for expr in exprs)
+        sub_expressions = " ".join(map(str, exprs))
         return f"({' '.join((name, sub_expressions))})"
 
     def __str__(self) -> str:
         try:
             return self.accept(self)  # Accepting an Expr triggers rendering.
         except NotImplementedError:
-            return f"({type(self).__name__}: {' '.join(str(attr) for attr in self.__dict__.values())})"
+            simplified_name = type(self).__name__.replace("Expr", "").lower()
+            return f"({simplified_name} {' '.join(map(str, self.__dict__.values()))})"
 
 
 @dataclass

@@ -9,7 +9,8 @@ class Stmt(Visitable, ABC):
     """Base class for Lox statements."""
 
     def __str__(self) -> str:
-        return f"<{type(self).__name__}: {', '.join(str(attr) for attr in self.__dict__.values())}>"
+        simplified_name = type(self).__name__.replace("Stmt", "").lower()
+        return f"<{simplified_name}: {', '.join(map(str, self.__dict__.values()))}>"
 
 
 @dataclass
