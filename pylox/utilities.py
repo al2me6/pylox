@@ -2,14 +2,12 @@ import sys
 from enum import Flag, auto
 from typing import Any
 
-HEADING_LENGTH = 20
-
-
 def dump_internal(name: str, *content: Any) -> None:
     """Output each item in `content` with a fancy header."""
-    print(f"{f'{name} Dump':~^{HEADING_LENGTH}}")  # Center and pad the title to HEADING_LENGTH characters long.
+    heading_length = 20
+    print(f"{f'{name} Dump':~^{heading_length}}")  # Center and pad the title to HEADING_LENGTH characters long.
     print(*content, sep="\n")
-    print("~"*HEADING_LENGTH)
+    print("~"*heading_length)
 
 
 def eprint(*args, **kwargs) -> None:
