@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Callable, Dict, List, NamedTuple, NoReturn, Optional, Set, Tuple
+from typing import List, Set
 
 from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.expr import *
