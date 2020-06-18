@@ -129,7 +129,7 @@ class Parser:
                 # If so, consume and parse it.
                 self._tv.advance()
                 right = self._expression(prec)
-                left = BinaryExpr(left, token, right)
+                left = BinaryExpr(token, left, right)
             else:  # If it's not an operator, we're done.
                 break
 

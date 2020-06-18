@@ -45,8 +45,8 @@ class Expr(Visitor, Visitable, ABC):
 
 @dataclass
 class BinaryExpr(Expr):
-    left: Expr
     operator: Token
+    left: Expr
     right: Expr
 
 
