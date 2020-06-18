@@ -20,6 +20,7 @@ class Prec(IntEnum):
     COMPARISON = auto()
     TERM = auto()
     FACTOR = auto()
+    EXP = auto()
     UNARY = auto()
     CALL = auto()
     PRIMARY = auto()
@@ -29,6 +30,7 @@ class Prec(IntEnum):
 
 
 INFIX_OPERATION_PRECEDENCE = {
+    Tk.STAR_STAR: Prec.EXP,
     Tk.STAR: Prec.FACTOR,
     Tk.SLASH: Prec.FACTOR,
     Tk.PLUS: Prec.TERM,

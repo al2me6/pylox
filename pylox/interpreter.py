@@ -115,6 +115,7 @@ class Interpreter(Visitor):
             Tk.MINUS: sub,
             Tk.STAR: mul,
             Tk.SLASH: truediv,
+            Tk.STAR_STAR: pow,
             Tk.GREATER: gt,
             Tk.GREATER_EQUAL: ge,
             Tk.LESS: lt,
@@ -130,6 +131,6 @@ class Interpreter(Visitor):
                 pass
             else:  # Arithmetic operations and comparisons.
                 self._expect_number_operand(expr.operator, left, right)
-            return ops[op](left, right)
+            return ops[op](left, right)  # type: ignore  # mypy is confused by the multiple signatures of pow()
 
         raise NOT_REACHED
