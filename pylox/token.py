@@ -96,4 +96,4 @@ class Token:
         return f"{str(self.token_type)[10:]} {attributes}"
 
 
-__all__ = ("SINGLE_CHAR_TOKENS", "COMPOUND_TOKENS", "Token", "TokenType", "LiteralValue",)
+__all__ = ("SINGLE_CHAR_TOKENS", "COMPOUND_TOKENS", "Token", "Tk", "LiteralValue",)
