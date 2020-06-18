@@ -72,6 +72,10 @@ class Interpreter(Visitor):
         if not _check_types({float}, *operand):
             raise LoxRuntimeError.at_token(operator, "Operands must be numbers.", fatal=True)
 
+    def _expect_number_or_string_operand(self, operator: Token, *operand: Any) -> None:
+        if not _check_types({float, str}, *operand):
+            raise LoxRuntimeError.at_token(operator, "Operands must both be numbers or both be strings.", fatal=True)
+
     # ~~~ Interpreters ~~~
 
     def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
@@ -119,13 +123,10 @@ class Interpreter(Visitor):
         }
         if (op := expr.operator.token_type) in ops:
             if op is Tk.PLUS:  # Used for both arithmetic addition and string concatenation.
-                if not _check_types({float, str}, left, right):
-                    raise LoxRuntimeError.at_token(
-                        expr.operator,
-                        "Operands must both be numbers or both be strings.",
-                        fatal=True
-                    )
-            else:
+                self._expect_number_or_string_operand(expr.operator, left, right)
+            elif op in {Tk.BANG_EQUAL, Tk.EQUAL_EQUAL}:  # Equality comparisons are valid on all objects.
+                pass
+            else:  # Arithmetic operations and comparisons.
                 self._expect_number_operand(expr.operator, left, right)
             return ops[op](left, right)
 
