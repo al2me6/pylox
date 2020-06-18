@@ -82,7 +82,7 @@ class Parser:
 
     def _has_next(self) -> bool:
         if self._tv.has_next():
-            if self._tv.peek() != Tk.EOF:
+            if self._tv.peek_unwrap().token_type is not Tk.EOF:
                 return True
         return False
 
