@@ -40,7 +40,7 @@ class Expr(Visitor, Visitable, ABC):
         try:
             return self.accept(self)  # Accepting an Expr triggers rendering.
         except NotImplementedError:
-            return repr(self)
+            return f"({type(self).__name__}: {' '.join(str(attr) for attr in self.__dict__.values())})"
 
 
 @dataclass

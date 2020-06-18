@@ -8,6 +8,9 @@ from pylox.visitor import Visitable
 class Stmt(Visitable, ABC):
     """Base class for Lox statements."""
 
+    def __str__(self) -> str:
+        return f"<{type(self).__name__}: {', '.join(str(attr) for attr in self.__dict__.values())}>"
+
 
 @dataclass
 class ExpressionStmt(Stmt):
