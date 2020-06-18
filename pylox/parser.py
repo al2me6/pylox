@@ -102,35 +102,38 @@ class Parser:
     # ~~~ parsers ~~~
 
     def _expression(self, min_precedence: Prec) -> Expr:
-        # Parse prefix operators.
+        # Parse prefix operators and literals.
         token = self._tv.advance()
-        expr: Expr
+        left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression(Prec.ASSIGNMENT)
             self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
-            expr = GroupingExpr(enclosed)
+            left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
-            expr = UnaryExpr(token, self._expression(Prec.FACTOR))
+            left = UnaryExpr(token, self._expression(Prec.FACTOR))
         elif token_type in {Tk.FALSE, Tk.TRUE, Tk.NIL, Tk.NUMBER, Tk.STRING}:
-            expr = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
+            left = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
         else:
             raise LoxSyntaxError.at_token(token, "Expected expression.", fatal=True)
 
-        # Lox does not have postfix operators.
-
-        # Parse infix operators.
+        # Parse the "right hand side".
         while self._has_next():
             token = self._tv.peek_unwrap()
             token_type = token.token_type
-            if (prec := INFIX_OPERATION_PRECEDENCE.get(token_type)):
+            # Parse infix operators.
+            if (prec := INFIX_OPERATION_PRECEDENCE.get(token_type)):  # Check if the operator is valid.
+                # Check if it has high enough precedence for its expression to be parsed as an
+                # operand of the "parent" half-parsed expression.
                 if prec <= min_precedence:
                     break
+                # If so, consume and parse it.
                 self._tv.advance()
-                expr = BinaryExpr(expr, token, self._expression(prec))
-                continue
-            break
+                right = self._expression(prec)
+                left = BinaryExpr(left, token, right)
+            else:  # If it's not an operator, we're done.
+                break
 
-        return expr
+        return left
 
 
 __all__ = ("Parser",)
