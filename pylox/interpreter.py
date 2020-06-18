@@ -72,6 +72,8 @@ class Interpreter(Visitor):
             raise LoxRuntimeError.at_token(operator, "Operands must be numbers.", fatal=True)
 
     def _expect_number_or_string_operand(self, operator: Token, *operand: Any) -> None:
+        """Enforce that the `operand`s passed are all numbers or all strings. Otherwise,
+        emit an error at the given `operator` token."""
         if not _check_types({float, str}, *operand):
             raise LoxRuntimeError.at_token(operator, "Operands must both be numbers or both be strings.", fatal=True)
 
@@ -121,6 +123,7 @@ class Interpreter(Visitor):
             Tk.BANG_EQUAL: lambda l, r: not _equality(l, r),
         }
         if (op := expr.operator.token_type) in ops:
+            # Note that we do not do implicit casts. That Pandora's box is not to be opened...
             if op is Tk.PLUS:  # Used for both arithmetic addition and string concatenation.
                 self._expect_number_or_string_operand(expr.operator, left, right)
             elif op in {Tk.BANG_EQUAL, Tk.EQUAL_EQUAL}:  # Equality comparisons are valid on all objects.
