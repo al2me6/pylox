@@ -118,7 +118,7 @@ class Interpreter(Visitor):
             Tk.LESS: lt,
             Tk.LESS_EQUAL: le,
             Tk.EQUAL_EQUAL: _equality,
-            Tk.BANG_EQUAL: lambda left, right: not _equality(left, right),
+            Tk.BANG_EQUAL: lambda l, r: not _equality(l, r),
         }
         if (op := expr.operator.token_type) in ops:
             if op is Tk.PLUS:  # Used for both arithmetic addition and string concatenation.

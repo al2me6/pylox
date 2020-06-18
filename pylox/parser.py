@@ -24,7 +24,7 @@ class Prec(IntEnum):
     CALL = auto()
     PRIMARY = auto()
 
-    def as_right_assoc(self) -> Prec:
+    def as_right_associative(self) -> Prec:
         return self.__class__(self.value - 1)
 
 
@@ -63,7 +63,7 @@ class Parser:
 
     def parse(self) -> Expr:
         try:
-            parsed_tree = self.parse_until_precedence(Prec.ASSIGNMENT)
+            parsed_tree = self._parse_until_precedence(Prec.ASSIGNMENT)
         except LoxSyntaxError as error:
             self._error_handler.err(error)
             raise NOT_REACHED
@@ -72,7 +72,7 @@ class Parser:
                 dump_internal("AST", parsed_tree)
             return parsed_tree
 
-    def parse_until_precedence(self, min_precedence: Prec) -> Expr:
+    def _parse_until_precedence(self, min_precedence: Prec) -> Expr:
         return self._expression(min_precedence)
 
     # ~~~ helper functions ~~~
