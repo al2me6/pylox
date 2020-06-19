@@ -47,6 +47,9 @@ class UnaryExpr(Expr):
     operator: Token
     right: Expr
 
+    def __str__(self) -> str:
+        return f"({self.operator.lexeme} {self.right})"
+
 
 @dataclass
 class VariableExpr(Expr):
