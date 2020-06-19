@@ -7,7 +7,7 @@ from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
 from pylox.stmt import *
 from pylox.token import Tk, Token
-from pylox.utilities import NOT_REACHED
+from pylox.utilities import NOT_REACHED, lox_object_to_str
 from pylox.visitor import Visitor
 
 
@@ -37,18 +37,6 @@ def _equality(left: Any, right: Any) -> bool:
             return True
         return False
     return left == right
-
-
-def _to_text(obj: Any) -> str:
-    """Convert a Lox object to a string."""
-    if obj is None:
-        return "nil"  # The null type is "nil" in Lox.
-    text = str(obj)
-    if isinstance(obj, float) and text.endswith(".0"):
-        text = text[:-2]  # Output 100.0 as 100, etc.
-    elif isinstance(obj, bool):
-        text = text.lower()  # Convert "True" to "true", etc.
-    return text
 
 
 class Interpreter(Visitor):
@@ -99,7 +87,7 @@ class Interpreter(Visitor):
         self._evaluate(stmt.expression)
 
     def _visit_PrintStmt__(self, stmt: PrintStmt) -> None:
-        print(_to_text(self._evaluate(stmt.expression)))
+        print(lox_object_to_str(self._evaluate(stmt.expression)))
 
     def _visit_VarStmt__(self, stmt: VarStmt) -> None:
         value: Any = None

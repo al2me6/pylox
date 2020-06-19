@@ -19,6 +19,18 @@ def eprint(*args, **kwargs) -> None:
     print(*args, **kwargs)
 
 
+def lox_object_to_str(obj: Any) -> str:
+    """Represent a Lox object as a string."""
+    if obj is None:
+        return "nil"  # The null type is "nil" in Lox.
+    string = str(obj)
+    if isinstance(obj, float) and string.endswith(".0"):
+        string = string[:-2]  # Output 100.0 as 100, etc.
+    elif isinstance(obj, bool):
+        string = string.lower()  # Convert "True" to "true", etc.
+    return string
+
+
 class Debug(Flag):
     DUMP_TOKENS = auto()
     DUMP_AST = auto()

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Union
 
 from pylox.token import Token
-from pylox.utilities import ast_node_pretty_printer
+from pylox.utilities import ast_node_pretty_printer, lox_object_to_str
 from pylox.visitor import Visitable
 
 LoxLiteral = Union[float, str, bool, None]
@@ -39,9 +39,7 @@ class LiteralExpr(Expr):
     value: LoxLiteral
 
     def __str__(self) -> str:
-        if self.value is None:  # The null type is "nil" in Lox.
-            return "nil"
-        return str(self.value)
+        return lox_object_to_str(self.value)
 
 
 @dataclass
