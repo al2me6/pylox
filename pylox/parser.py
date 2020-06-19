@@ -74,7 +74,7 @@ class Parser:
         while self._has_next():
             if (declaration := self._declaration()):
                 self._statements.append(declaration)
-        if self._dump:
+        if self._dump and not self._error_handler.error_state:
             dump_internal("AST", *self._statements)
         return self._statements
 
