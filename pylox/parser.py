@@ -48,7 +48,7 @@ RIGHT_ASSOCIATIVE_OPERATORS = {
 }
 
 
-def _get_infix_operator_precedence_by_associativity(op: Tk, prec: Prec) -> Prec:
+def _adjust_precedence_for_operator_associativity(prec: Prec, op: Tk) -> Prec:
     if op in RIGHT_ASSOCIATIVE_OPERATORS:
         return Prec(prec.value - 1)
     return prec
@@ -196,7 +196,7 @@ class Parser:
                     middle = self._expression()
                     self._expect_next({Tk.COLON}, "Expected ':' in ternary if operator.")
 
-                right = self._expression(_get_infix_operator_precedence_by_associativity(op_type, prec))
+                right = self._expression(_adjust_precedence_for_operator_associativity(prec, op_type))
 
                 if op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)

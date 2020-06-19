@@ -78,15 +78,15 @@ class Scanner:
         elif char in SINGLE_CHAR_TOKENS:
             next_token = Tk(char)
         elif char == "/":
-            next_token = self._slash_helper()
+            next_token = self._slash()
         elif char == '"':
-            next_token = self._string_helper()
+            next_token = self._string()
         elif char.isspace():  # Whitespaces are dropped.
             pass
         elif _is_arabic_numeral(char):
-            next_token = self._number_helper()
+            next_token = self._number()
         elif _is_valid_identifier_start(char):
-            next_token = self._identifier_helper()
+            next_token = self._identifier()
         else:  # What remains is an error.
             self._error_handler.err(LoxSyntaxError(self._sv.current_index, "Unexpected character."))
 
@@ -103,7 +103,7 @@ class Scanner:
 
     # ~~~ Helpers for specific token types ~~~
 
-    def _slash_helper(self) -> Optional[Tk]:
+    def _slash(self) -> Optional[Tk]:
         """Decide if the matched slash is division or a comment.
         Return a SLASH token or consume the comment."""
         if self._sv.advance_if_match("/"):  # A comment must be followed by another slash.
@@ -112,7 +112,7 @@ class Scanner:
             return None  # No token to be produced this pass.
         return Tk.SLASH
 
-    def _string_helper(self) -> Optional[Tuple[Tk, str]]:
+    def _string(self) -> Optional[Tuple[Tk, str]]:
         """Consume an entire string."""
         while self._sv.peek() != '"' and self._sv.has_next():  # Test for unterminated string.
             self._sv.advance()  # Note that multi-line strings are allowed.
@@ -132,7 +132,7 @@ class Scanner:
         assert self._sv.marker_index is not None
         return Tk.STRING, self._sv[self._sv.marker_index + 1:self._sv.current_index - 1]
 
-    def _number_helper(self) -> Tuple[Tk, float]:
+    def _number(self) -> Tuple[Tk, float]:
         """Consume an entire number."""
         while _is_arabic_numeral(self._sv.peek()):
             self._sv.advance()
@@ -145,7 +145,7 @@ class Scanner:
         # Parse the value of the number directly with Python.
         return Tk.NUMBER, float(self._sv.get_slice_from_marker())
 
-    def _identifier_helper(self) -> Tk:
+    def _identifier(self) -> Tk:
         """Consume an entire identifier and decide if it is a keyword."""
         while _is_valid_identifier_name(self._sv.peek()):
             self._sv.advance()
