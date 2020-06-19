@@ -12,6 +12,7 @@ from pylox.utilities import dump_internal
 class Prec(IntEnum):
     NONE = auto()
     ASSIGNMENT = auto()
+    TERNARY = auto()
     OR = auto()
     AND = auto()
     EQUALITY = auto()
@@ -36,12 +37,14 @@ INFIX_OPERATOR_PRECEDENCE = {
     Tk.LESS_EQUAL: Prec.COMPARISON,
     Tk.EQUAL_EQUAL: Prec.EQUALITY,
     Tk.BANG_EQUAL: Prec.EQUALITY,
+    Tk.QUESTION: Prec.TERNARY,
     Tk.EQUAL: Prec.ASSIGNMENT,
 }
 
 RIGHT_ASSOCIATIVE_OPERATORS = {
     Tk.STAR_STAR,
     Tk.EQUAL,
+    Tk.QUESTION,
 }
 
 
@@ -172,19 +175,31 @@ class Parser:
         while self._has_next():
             op = self._tv.peek_unwrap()
             op_type = op.token_type
+
             # Parse infix operators.
             if (prec := INFIX_OPERATOR_PRECEDENCE.get(op_type)):  # Check if the operator is valid.
                 # Check if it has high enough precedence for its expression to be parsed as an
                 # operand of the "parent" half-parsed expression.
                 if prec <= min_precedence:
                     break
+
                 # Consume the operator and parse the RHS with the appropriate associativity.
+
                 self._tv.advance()
+
+                if op_type is Tk.QUESTION:
+                    middle = self._expression()
+                    self._expect_next({Tk.COLON}, "Expected ':' in ternary if operator.")
+
                 right = self._expression(_get_infix_operator_precedence_by_associativity(op_type, prec))
-                if op_type is Tk.EQUAL:
+
+                if op_type is Tk.QUESTION:
+                    left = TernaryIfExpr(left, middle, right)
+                elif op_type is Tk.EQUAL:
                     left = self._assignment_expression_parselet(op, left, right)
                 else:
                     left = BinaryExpr(op, left, right)
+
             else:  # If it's not an operator, we're done.
                 break
 

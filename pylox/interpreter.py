@@ -165,3 +165,7 @@ class Interpreter(Visitor):
         value = self._evaluate(expr.value)
         self._environment.assign(expr.name, value)
         return value
+
+    def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> Any:
+        """A ternary if operator is evaluated with... of course, another ternary if operator."""
+        return self._evaluate(expr.true_branch if _truthiness(self._evaluate(expr.condition)) else expr.false_branch)

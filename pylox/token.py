@@ -14,6 +14,8 @@ class Tk(Enum):
     MINUS = "-"
     PLUS = "+"
     SEMICOLON = ";"
+    QUESTION = "?"
+    COLON = ":"
     # compoundable
     STAR = "*"
     BANG = "!"

@@ -60,3 +60,10 @@ class VariableExpr(Expr):
 class AssignmentExpr(Expr):
     name: Token
     value: Expr
+
+
+@dataclass
+class TernaryIfExpr(Expr):
+    condition: Expr
+    true_branch: Expr
+    false_branch: Expr
