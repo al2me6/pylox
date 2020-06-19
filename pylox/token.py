@@ -60,8 +60,14 @@ class Tk(Enum):
 
 # auto() variants have integer values. Filter the remaining values by length to isolate the target ones.
 # THIS IS FRAGILE CODE: addition single-character keywords or three-character symbols will break this.
-SINGLE_CHAR_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 1, Tk.iter_values()))
-COMPOUND_TOKENS = tuple(filter(lambda val: isinstance(val, str) and len(val) == 2, Tk.iter_values()))
+SINGLE_CHAR_TOKENS = tuple(filter(
+    lambda val: isinstance(val, str) and len(val) == 1,
+    Tk.iter_values()
+))
+COMPOUND_TOKENS = tuple(filter(
+    lambda val: isinstance(val, str) and len(val) == 2,
+    Tk.iter_values()
+))
 
 
 LiteralValue = Union[str, float]

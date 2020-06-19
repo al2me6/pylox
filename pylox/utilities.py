@@ -41,7 +41,10 @@ class Debug(Flag):
 
 def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Iterator[str]]:
     simplified_name = type(obj).__name__.replace(base_name, "").lower()
-    attrs = (val.lexeme if isinstance(val, Token) else str(val) for val in obj.__dict__.values())
+    attrs = (
+        val.lexeme if isinstance(val, Token) else str(val)
+        for val in obj.__dict__.values()
+    )
     return simplified_name, attrs
 
 

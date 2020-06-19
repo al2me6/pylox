@@ -68,10 +68,12 @@ class Interpreter(Visitor):
             raise LoxRuntimeError.at_token(operator, "Operands must be numbers.", fatal=True)
 
     def _expect_number_or_string_operand(self, operator: Token, *operand: Any) -> None:
-        """Enforce that the `operand`s passed are all numbers or all strings. Otherwise,
-        emit an error at the given `operator` token."""
+        """Enforce that the `operand`s passed are all numbers or all strings.
+        Otherwise, emit an error at the given `operator` token."""
         if not _check_types({float, str}, *operand):
-            raise LoxRuntimeError.at_token(operator, "Operands must both be numbers or both be strings.", fatal=True)
+            raise LoxRuntimeError.at_token(
+                operator, "Operands must both be numbers or both be strings.", fatal=True
+            )
 
     @contextmanager
     def sub_environment(self):
@@ -168,4 +170,7 @@ class Interpreter(Visitor):
 
     def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> Any:
         """A ternary if operator is evaluated with... of course, another ternary if operator."""
-        return self._evaluate(expr.true_branch if _truthiness(self._evaluate(expr.condition)) else expr.false_branch)
+        return self._evaluate(
+            expr.true_branch if _truthiness(self._evaluate(expr.condition))
+            else expr.false_branch
+        )

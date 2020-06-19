@@ -57,8 +57,9 @@ def _get_infix_operator_precedence_by_associativity(op: Tk, prec: Prec) -> Prec:
 class Parser:
     """A simple Pratt parser.
 
-    Its logic is derived from `clox`'s implementation, though the implementation is heavily inspired by Aleksey
-    Kladov's article on the subject: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html.
+    Its logic is derived from `clox`'s implementation, though the implementation
+    is motivated by Aleksey Kladov's article on the subject:
+    https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html.
     """
 
     def __init__(
@@ -165,7 +166,11 @@ class Parser:
         elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.FACTOR))
         elif token_type in {Tk.FALSE, Tk.TRUE, Tk.NIL, Tk.NUMBER, Tk.STRING}:
-            left = LiteralExpr({Tk.FALSE: False, Tk.TRUE: True, Tk.NIL: None}.get(token_type, token.literal))
+            left = LiteralExpr({
+                Tk.FALSE: False,
+                Tk.TRUE: True,
+                Tk.NIL: None
+            }.get(token_type, token.literal))
         elif token_type is Tk.IDENTIFIER:
             left = VariableExpr(token)
         else:
