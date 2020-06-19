@@ -29,6 +29,7 @@ class Lox:
                 sys.exit(0)
 
     def run(self, source: str) -> None:
+        source = source.replace("\r\n", "\n")
         self.error_handler.set_source(source)
 
         tokens = Scanner(
