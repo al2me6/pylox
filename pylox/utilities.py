@@ -1,6 +1,6 @@
 import sys
 from enum import Flag, auto
-from typing import Any, List, Tuple
+from typing import Any, Iterator, Tuple
 
 from pylox.token import Token
 
@@ -39,15 +39,10 @@ class Debug(Flag):
     JAVA_STYLE_TOKENS = auto()
 
 
-def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Tuple[str, ...]]:
+def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Iterator[str]]:
     simplified_name = type(obj).__name__.replace(base_name, "").lower()
-    values: List[str] = list()
-    for value in obj.__dict__.values():
-        if isinstance(value, Token):
-            values.append(value.lexeme)
-        else:
-            values.append(str(value))
-    return simplified_name, tuple(values)
+    attrs = (val.lexeme if isinstance(val, Token) else str(val) for val in obj.__dict__.values())
+    return simplified_name, attrs
 
 
 NOT_REACHED = AssertionError("Unreachable code reached")

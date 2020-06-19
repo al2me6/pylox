@@ -14,7 +14,7 @@ from pylox.visitor import Visitor
 def _check_types(expected_types: Set[Type], *obj: Any) -> bool:
     """Check if the `obj`s passed are all of one of the expected types."""
     for expected_type in expected_types:
-        if all(map(lambda o: isinstance(o, expected_type), obj)):  # pylint: disable=cell-var-from-loop
+        if all(isinstance(o, expected_type) for o in obj):  # pylint: disable=cell-var-from-loop
             return True
     return False
 
