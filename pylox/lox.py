@@ -39,7 +39,7 @@ class Lox:
 
         self.error_handler.checkpoint()
         if self.debug_flags & Debug.NO_PARSE:
-            sys.exit(0)
+            raise LoxExit(0)
         statements = Parser(
             tokens,
             self.error_handler,
@@ -48,5 +48,5 @@ class Lox:
 
         self.error_handler.checkpoint()
         if self.debug_flags & Debug.NO_INTERPRET:
-            sys.exit(0)
+            raise LoxExit(0)
         self.interpreter.interpret(statements)
