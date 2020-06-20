@@ -118,13 +118,11 @@ class Scanner:
             self._sv.advance()  # Note that multi-line strings are allowed.
         if not self._sv.has_next():  # Error on unterminated string.
             assert self._sv.marker_index is not None  # Make mypy happy.
-            self._error_handler.err(
-                LoxSyntaxError(
-                    self._sv.current_index,
-                    "Unterminated string.",
-                    length=self._sv.current_index - self._sv.marker_index
-                )
-            )
+            self._error_handler.err(LoxSyntaxError(
+                self._sv.current_index,
+                "Unterminated string.",
+                length=self._sv.current_index - self._sv.marker_index
+            ))
             return None
         # Consume the closing double quotation mark.
         self._sv.advance()
