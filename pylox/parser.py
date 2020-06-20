@@ -156,7 +156,39 @@ class Parser:
         return BlockStmt(stmts)
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
-        # Parse prefix operators and literals.
+        """The core of the Pratt parser.
+
+            Ex. parsing "a / b ** c ** d + -e"
+            > Parsed (a).
+            > Next operator is /, stronger than NONE -> grab (a), parse the RHS expr until FACTOR.
+              > Parsed (b).
+              > Next operator is **, stronger than FACTOR -> grab (b), parse the RHS until EXP...
+                But! ** is right associative, so the actual Prec passed is one less: FACTOR.
+                > Parsed (c).
+                > Next operator is **, which is not strong enough compared to EXP, but *is* compared
+                  to FACTOR -> parse RHS until (EXP - 1). In effect, lowering the min Prec in the
+                  previous pass allows the same operator, if it appears again, to grab the LHS.
+                  > Parsed (d).
+                  > Next operator is +, weaker than Prec of preceding ** -> unwind.
+                > Received (d) as the RHS for **.
+                > Parsed (** c d) as the new LHS.
+                > Next operator is +, weaker than ** -> unwind.
+              > Received (** c d) as RHS.
+              > Parsed (** b (** c d)) as LHS.
+              > Next operator is again +, weaker than / -> unwind.
+            > Received (** b (** c d)) as RHS.
+            > Parsed (/ a (** b (** c d))) as LHS.
+            > There are more tokens -> loop over.
+            > Next operator is +, stronger than NONE -> parse RHS until TERM.
+              > Parsed (-) -> parse RHS at lowest Prec: NONE.
+              > Parsed (- e) as LHS.
+              > No more tokens -> unwind.
+            > Received (- e) as RHS.
+            > Parsed (+ (/ a (** b (** c d))) (- e)) as LHS.
+            > No more tokens -> unwind.
+            > Complete.
+        """
+        # Parse prefix operators and literals into the LHS.
         token = self._tv.advance()
         left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
@@ -164,7 +196,7 @@ class Parser:
             self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
-            left = UnaryExpr(token, self._expression(Prec.FACTOR))
+            left = UnaryExpr(token, self._expression(Prec.UNARY))
         elif token_type in {Tk.FALSE, Tk.TRUE, Tk.NIL, Tk.NUMBER, Tk.STRING}:
             left = LiteralExpr({
                 Tk.FALSE: False,
@@ -176,35 +208,38 @@ class Parser:
         else:
             raise LoxSyntaxError.at_token(token, "Expected expression.")
 
-        # Parse the "right hand side".
+        # Parse the operator and the RHS, if possible.
         while self._has_next():
             op = self._tv.peek_unwrap()
             op_type = op.token_type
 
             # Parse infix operators.
             if (prec := INFIX_OPERATOR_PRECEDENCE.get(op_type)):  # Check if the operator is valid.
-                # Check if it has high enough precedence for its expression to be parsed as an
-                # operand of the "parent" half-parsed expression.
+                # Check if the operator has high enough relative precedence for the parsed LHS to be
+                # bound to itself. If not, then we break out of this pass and return so that the LHS
+                # becomes the RHS of a previously half-parsed, higher-precedence operation.
                 if prec <= min_precedence:
                     break
 
-                # Consume the operator and parse the RHS with the appropriate associativity.
-
+                # Consume the operator.
                 self._tv.advance()
 
+                # Parse the "middle" of the ternary if operator. Since it is enclosed within the
+                # operator (between ? and :), parse the entirety of the expression.
                 if op_type is Tk.QUESTION:
                     middle = self._expression()
                     self._expect_next({Tk.COLON}, "Expected ':' in ternary if operator.")
 
+                # Parse the RHS up to the current operator's precedence, taking associativity into account.
                 right = self._expression(_adjust_precedence_for_operator_associativity(prec, op_type))
 
+                # Build the new LHS.
                 if op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)
                 elif op_type is Tk.EQUAL:
                     left = self._assignment_expression_parselet(op, left, right)
                 else:
                     left = BinaryExpr(op, left, right)
-
             else:  # If it's not an operator, we're done.
                 break
 
