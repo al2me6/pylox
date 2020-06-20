@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from operator import add, ge, gt, le, lt, mul, sub, truediv
+from operator import add, ge, gt, le, lt, mul, sub
 from typing import Any, List, Set, Type
 
 from pylox.environment import Environment
@@ -32,11 +32,16 @@ def _truthiness(obj: Any) -> bool:
 
 def _equality(left: Any, right: Any) -> bool:
     """Evaluate if two Lox objects are equal."""
-    if left is None:
-        if right is None:
-            return True
-        return False
-    return left == right
+    if type(left) is type(right):
+        return left == right
+    return False
+
+
+def _lox_division(left: float, right: float) -> float:
+    try:
+        return left / right
+    except ZeroDivisionError:
+        return float("nan")
 
 
 class Interpreter(Visitor):
@@ -139,7 +144,7 @@ class Interpreter(Visitor):
             Tk.PLUS: add,
             Tk.MINUS: sub,
             Tk.STAR: mul,
-            Tk.SLASH: truediv,
+            Tk.SLASH: _lox_division,
             Tk.STAR_STAR: pow,
             Tk.GREATER: gt,
             Tk.GREATER_EQUAL: ge,
