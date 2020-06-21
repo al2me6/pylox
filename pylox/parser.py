@@ -97,14 +97,19 @@ class Parser:
             return self._tv.advance()
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message)
 
-    def _expect_semicolon(self) -> None:
-        self._expect_next({Tk.SEMICOLON}, "Expect ';' after expression.")
+    def _expect_semicolon(self, message: str = "after expression") -> None:
+        self._expect_next({Tk.SEMICOLON}, f"Expect ';' {message}.")
+
+    def _expect_left_paren(self, message: str) -> None:
+        self._expect_next({Tk.LEFT_PAREN}, f"Expect '(' {message}.")
+
+    def _expect_right_paren(self, message: str) -> None:
+        self._expect_next({Tk.RIGHT_PAREN}, f"Expect ')' {message}.")
 
     def _synchronize(self) -> None:
         self._tv.advance()
         while self._has_next():
-            prev = self._tv.peek_unwrap(-1)
-            if prev.token_type is Tk.SEMICOLON:
+            if self._tv.peek_unwrap(-1).token_type is Tk.SEMICOLON:
                 return
             if self._tv.match(Tk.CLASS, Tk.FUN, Tk.VAR, Tk.FOR, Tk.IF, Tk.WHILE, Tk.PRINT, Tk.RETURN):
                 return
@@ -160,17 +165,17 @@ class Parser:
         return BlockStmt(stmts)
 
     def _if_statement_parselet(self) -> IfStmt:
-        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
+        self._expect_left_paren("after 'if'")
         condition = self._expression()
-        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
+        self._expect_right_paren("after if condition")
         then_branch = self._statement()
         else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
 
     def _while_statement_parselet(self) -> WhileStmt:
-        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
+        self._expect_left_paren("after 'while'")
         condition = self._expression()
-        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
+        self._expect_right_paren("after while condition")
         return WhileStmt(condition, body=self._statement())
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
@@ -211,7 +216,7 @@ class Parser:
         left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression()
-            self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after expression.")
+            self._expect_right_paren("after expression")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.UNARY))
