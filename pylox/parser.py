@@ -129,9 +129,7 @@ class Parser:
 
     def _variable_declaration_parselet(self) -> VarStmt:
         name = self._expect_next({Tk.IDENTIFIER}, "Expect variable name.")
-        expr: Optional[Expr] = None
-        if self._tv.advance_if_match(Tk.EQUAL):
-            expr = self._expression()
+        expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
         self._expect_semicolon()
         return VarStmt(name, expr)
 
