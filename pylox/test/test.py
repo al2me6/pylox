@@ -11,10 +11,10 @@ import io
 import os
 import re
 import sys
-from contextlib import redirect_stderr, redirect_stdout, suppress
+from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
 from operator import eq
 from pathlib import Path
-from typing import Collection, List, Optional, Sequence, Set
+from typing import Collection, List, Optional, Sequence
 
 from termcolor import colored
 
@@ -45,7 +45,7 @@ class Test:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._expected_output: List[str] = list()
-        self._expected_errors: Set[str] = set()
+        self._expected_errors: List[str] = list()
 
     def execute(self, lox_instance: Lox) -> bool:
         out_capture = io.StringIO()
@@ -72,19 +72,19 @@ class Test:
     def _compute_expected_output(self, source: str) -> None:
         # TODO: fix this string manipulation madness.
         # TODO: support "Error at "symbol" expectations.
-        expect_runtime_error = set()
+        expect_runtime_error = list()
         for line_number, line in enumerate(source.splitlines(), start=1):
             if (match := OUTPUT_EXPECT.search(line)):
                 self._expected_output.append(match.group(1))
             if (match := ERROR_EXPECT.search(line)):
-                self._expected_errors.add(f"[line {line_number}] LoxSyntaxError{match.group(3)}")
+                self._expected_errors.append(f"[line {line_number}] LoxSyntaxError{match.group(3)}")
             if (match := ERROR_LINE_EXPECT.search(line)):
-                self._expected_errors.add(f"[line {match.group(1)}] LoxSyntaxError{match.group(4)}")
+                self._expected_errors.append(f"[line {match.group(1)}] LoxSyntaxError{match.group(4)}")
             if (match := RUNTIME_ERROR_EXPECT.search(line)):
                 if self._expected_errors:
                     raise RuntimeError("Cannot have both compile- and runtime errors.")
-                expect_runtime_error.add(f"[line {line_number}] LoxRuntimeError: {match.group(1)}")
-        self._expected_errors.update(expect_runtime_error)
+                expect_runtime_error.append(f"[line {line_number}] LoxRuntimeError: {match.group(1)}")
+        self._expected_errors.extend(expect_runtime_error)
 
     def _verify(self, output: Sequence[str], errors: Sequence[str]) -> Optional[str]:
         error_message = "Expect:\n{}\nEncountered:\n{}\n"
@@ -101,12 +101,16 @@ class Tester:
         "block",
         "bool",
         "comments",
+        "for",
+        "if",
+        "logical_operator",
         "nil",
         "number",
         "operator",
         "print",
         "string",
         "variable",
+        "while",
         "empty_file.lox",
         "precedence.lox",
         "unexpected_character.lox",
@@ -133,7 +137,7 @@ class Tester:
         test_count_str_len = len(str(test_count))
 
         for num, test in enumerate(self._queued_tests, start=1):
-            print(f"{num:>{f'{test_count_str_len}'}}/{test_count} ", end="")
+            print(f"{num:>{test_count_str_len}}/{test_count} ", end="")
             if not test.execute(self._lox_instance):
                 errors += 1
 
@@ -148,10 +152,18 @@ class Tester:
             print(f"All {test_count} tests {colored('passed', 'green')}!")
             sys.exit()
 
+    @contextmanager
+    def _apply_special_options(self, *options: Debug):
+        for option in options:
+            self._lox_instance.debug_flags |= option
+        yield
+        for option in options:
+            self._lox_instance.debug_flags &= ~option
+
     def _discover_and_queue_tests(self, path: Path) -> None:
         assert path.exists()
         if path.is_dir():
-            for sub_path in path.iterdir():
+            for sub_path in sorted(path.iterdir()):
                 self._discover_and_queue_tests(path / sub_path)
         else:  # Is file.
             self._queued_tests.append(Test(path))
