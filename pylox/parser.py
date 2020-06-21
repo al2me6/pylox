@@ -135,33 +135,19 @@ class Parser:
 
     def _statement(self) -> Stmt:
         stmt: Stmt
-        if self._tv.advance_if_match(Tk.WHILE):
-            stmt = self._while_statement_parselet()
-        elif self._tv.advance_if_match(Tk.IF):
+        if self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
+        elif self._tv.advance_if_match(Tk.LEFT_BRACE):
+            stmt = self._block_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
             stmt = PrintStmt(self._expression())
             self._expect_semicolon()
-        elif self._tv.advance_if_match(Tk.LEFT_BRACE):
-            stmt = self._block_statement_parselet()
+        elif self._tv.advance_if_match(Tk.WHILE):
+            stmt = self._while_statement_parselet()
         else:
             stmt = ExpressionStmt(self._expression())
             self._expect_semicolon()
         return stmt
-
-    def _while_statement_parselet(self) -> WhileStmt:
-        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
-        condition = self._expression()
-        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
-        return WhileStmt(condition, body=self._statement())
-
-    def _if_statement_parselet(self) -> IfStmt:
-        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
-        condition = self._expression()
-        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
-        then_branch = self._statement()
-        else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
-        return IfStmt(condition, then_branch, else_branch)
 
     def _block_statement_parselet(self) -> BlockStmt:
         stmts: List[Stmt] = list()
@@ -172,6 +158,20 @@ class Parser:
                 stmts.append(stmt)
         self._expect_next({Tk.RIGHT_BRACE}, "Expect '}' after block.")
         return BlockStmt(stmts)
+
+    def _if_statement_parselet(self) -> IfStmt:
+        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
+        condition = self._expression()
+        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
+        then_branch = self._statement()
+        else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
+        return IfStmt(condition, then_branch, else_branch)
+
+    def _while_statement_parselet(self) -> WhileStmt:
+        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
+        condition = self._expression()
+        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
+        return WhileStmt(condition, body=self._statement())
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
         """The core of the Pratt parser.

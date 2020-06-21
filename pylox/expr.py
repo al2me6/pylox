@@ -18,6 +18,12 @@ class Expr(Visitable, ABC):
 
 
 @dataclass
+class AssignmentExpr(Expr):
+    name: Token
+    value: Expr
+
+
+@dataclass
 class BinaryExpr(Expr):
     operator: Token
     left: Expr
@@ -41,6 +47,18 @@ class LiteralExpr(Expr):
 
 
 @dataclass
+class LogicalExpr(BinaryExpr):
+    pass
+
+
+@dataclass
+class TernaryIfExpr(Expr):
+    condition: Expr
+    then_branch: Expr
+    else_branch: Expr
+
+
+@dataclass
 class UnaryExpr(Expr):
     operator: Token
     right: Expr
@@ -52,21 +70,3 @@ class UnaryExpr(Expr):
 @dataclass
 class VariableExpr(Expr):
     name: Token
-
-
-@dataclass
-class AssignmentExpr(Expr):
-    name: Token
-    value: Expr
-
-
-@dataclass
-class TernaryIfExpr(Expr):
-    condition: Expr
-    then_branch: Expr
-    else_branch: Expr
-
-
-@dataclass
-class LogicalExpr(BinaryExpr):
-    pass

@@ -17,22 +17,6 @@ class Stmt(Visitable, ABC):
 
 
 @dataclass
-class ExpressionStmt(Stmt):
-    expression: Expr
-
-
-@dataclass
-class PrintStmt(Stmt):
-    expression: Expr
-
-
-@dataclass
-class VarStmt(Stmt):
-    name: Token
-    initializer: Optional[Expr]
-
-
-@dataclass
 class BlockStmt(Stmt):
     statements: List[Stmt]
 
@@ -45,10 +29,26 @@ class BlockStmt(Stmt):
 
 
 @dataclass
+class ExpressionStmt(Stmt):
+    expression: Expr
+
+
+@dataclass
 class IfStmt(Stmt):
     condition: Expr
     then_branch: Stmt
     else_branch: Optional[Stmt]
+
+
+@dataclass
+class PrintStmt(Stmt):
+    expression: Expr
+
+
+@dataclass
+class VarStmt(Stmt):
+    name: Token
+    initializer: Optional[Expr]
 
 
 @dataclass

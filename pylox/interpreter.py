@@ -14,7 +14,7 @@ from pylox.visitor import Visitor
 def _check_types(expected_types: Set[Type], *obj: Any) -> bool:
     """Check if the `obj`s passed are all of one of the expected types."""
     for expected_type in expected_types:
-        if all(isinstance(o, expected_type) for o in obj):  # pylint: disable=cell-var-from-loop
+        if all(isinstance(o, expected_type) for o in obj):
             return True
     return False
 
@@ -94,8 +94,19 @@ class Interpreter(Visitor):
 
     # ~~~ Statement interpreters ~~~
 
+    def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
+        with self.sub_environment():
+            for inner_stmt in stmt.statements:
+                self._execute(inner_stmt)
+
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
         self._evaluate(stmt.expression)
+
+    def _visit_IfStmt__(self, stmt: IfStmt) -> None:
+        if _truthiness(self._evaluate(stmt.condition)):
+            self._execute(stmt.then_branch)
+        elif stmt.else_branch:
+            self._execute(stmt.else_branch)
 
     def _visit_PrintStmt__(self, stmt: PrintStmt) -> None:
         print(lox_object_to_str(self._evaluate(stmt.expression)))
@@ -106,44 +117,16 @@ class Interpreter(Visitor):
             value = self._evaluate(stmt.initializer)
         self._environment.define(stmt.name.lexeme, value)
 
-    def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
-        with self.sub_environment():
-            for inner_stmt in stmt.statements:
-                self._execute(inner_stmt)
-
-    def _visit_IfStmt__(self, stmt: IfStmt) -> None:
-        if _truthiness(self._evaluate(stmt.condition)):
-            self._execute(stmt.then_branch)
-        elif stmt.else_branch:
-            self._execute(stmt.else_branch)
-
     def _visit_WhileStmt__(self, stmt: WhileStmt) -> None:
         while _truthiness(self._evaluate(stmt.condition)):
             self._execute(stmt.body)
 
     # ~~~ Expression interpreters ~~~
 
-    def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
-        """A literal is evaluated by extracting its value."""
-        return expr.value
-
-    def _visit_GroupingExpr__(self, expr: GroupingExpr) -> Any:
-        """Evaluate a group by evaluating the expression contained within."""
-        return self._evaluate(expr.expression)
-
-    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Any:
-        """Evaluate the operand and then apply the correct unary operation.
-
-        There are two unary operations: logical negation and arithmetic negation."""
-        right = self._evaluate(expr.right)
-
-        if (op := expr.operator.token_type) is Tk.BANG:
-            return not _truthiness(right)
-        if op is Tk.MINUS:
-            self._expect_number_operand(expr.operator, right)
-            return -right
-
-        raise NOT_REACHED
+    def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> Any:
+        value = self._evaluate(expr.value)
+        self._environment.assign(expr.name, value)
+        return value
 
     def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Any:
         """Evaluate the two operands, ensure that their types match, and finally
@@ -179,20 +162,13 @@ class Interpreter(Visitor):
 
         raise NOT_REACHED
 
-    def _visit_VariableExpr__(self, expr: VariableExpr) -> Any:
-        return self._environment.get(expr.name)
+    def _visit_GroupingExpr__(self, expr: GroupingExpr) -> Any:
+        """Evaluate a group by evaluating the expression contained within."""
+        return self._evaluate(expr.expression)
 
-    def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> Any:
-        value = self._evaluate(expr.value)
-        self._environment.assign(expr.name, value)
-        return value
-
-    def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> Any:
-        """A ternary if operator is evaluated with... of course, another ternary if operator."""
-        return self._evaluate(
-            expr.then_branch if _truthiness(self._evaluate(expr.condition))
-            else expr.else_branch
-        )
+    def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
+        """A literal is evaluated by extracting its value."""
+        return expr.value
 
     def _visit_LogicalExpr__(self, expr: LogicalExpr) -> Any:
         left = self._evaluate(expr.left)
@@ -203,3 +179,27 @@ class Interpreter(Visitor):
             if not _truthiness(left):
                 return left
         return self._evaluate(expr.right)
+
+    def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> Any:
+        """A ternary if operator is evaluated with... of course, another ternary if operator."""
+        return self._evaluate(
+            expr.then_branch if _truthiness(self._evaluate(expr.condition))
+            else expr.else_branch
+        )
+
+    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Any:
+        """Evaluate the operand and then apply the correct unary operation.
+
+        There are two unary operations: logical negation and arithmetic negation."""
+        right = self._evaluate(expr.right)
+
+        if (op := expr.operator.token_type) is Tk.BANG:
+            return not _truthiness(right)
+        if op is Tk.MINUS:
+            self._expect_number_operand(expr.operator, right)
+            return -right
+
+        raise NOT_REACHED
+
+    def _visit_VariableExpr__(self, expr: VariableExpr) -> Any:
+        return self._environment.get(expr.name)
