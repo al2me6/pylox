@@ -70,14 +70,18 @@ class Interpreter(Visitor):
         """Enforce that the `operand`s passed are numbers. Otherwise,
         emit an error at the given `operator` token."""
         if not _check_types({float}, *operand):
-            raise LoxRuntimeError.at_token(operator, "Operands must be numbers.", fatal=True)
+            raise LoxRuntimeError.at_token(
+                operator,
+                "Operand must be a number." if len(operand) == 1 else "Operands must be numbers.",
+                fatal=True
+            )
 
     def _expect_number_or_string_operand(self, operator: Token, *operand: Any) -> None:
         """Enforce that the `operand`s passed are all numbers or all strings.
         Otherwise, emit an error at the given `operator` token."""
         if not _check_types({float, str}, *operand):
             raise LoxRuntimeError.at_token(
-                operator, "Operands must both be numbers or both be strings.", fatal=True
+                operator, "Operands must be two numbers or two strings.", fatal=True
             )
 
     @contextmanager

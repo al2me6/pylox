@@ -19,7 +19,7 @@ class Environment:
             if self.enclosing:
                 self.enclosing.assign(name, value)
                 return
-            raise LoxRuntimeError.at_token(name, "Undefined variable.", fatal=True)
+            raise LoxRuntimeError.at_token(name, f"Undefined variable '{name.lexeme}'.", fatal=True)
         self.define(name.lexeme, value)
 
     def get(self, name: Token) -> Any:
@@ -28,4 +28,4 @@ class Environment:
         except KeyError:
             if self.enclosing:
                 return self.enclosing.get(name)
-            raise LoxRuntimeError.at_token(name, "Undefined variable.", fatal=True)
+            raise LoxRuntimeError.at_token(name, f"Undefined variable '{name.lexeme}'.", fatal=True)

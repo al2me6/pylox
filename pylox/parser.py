@@ -96,7 +96,7 @@ class Parser:
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message)
 
     def _expect_semicolon(self) -> None:
-        self._expect_next({Tk.SEMICOLON}, "Expected ';' after expression.")
+        self._expect_next({Tk.SEMICOLON}, "Expect ';' after expression.")
 
     def _synchronize(self) -> None:
         self._tv.advance()
@@ -126,7 +126,7 @@ class Parser:
         return decl
 
     def _variable_declaration_parselet(self) -> VarStmt:
-        name = self._expect_next({Tk.IDENTIFIER}, "Expected variable name.")
+        name = self._expect_next({Tk.IDENTIFIER}, "Expect variable name.")
         expr: Optional[Expr] = None
         if self._tv.advance_if_match(Tk.EQUAL):
             expr = self._expression()
@@ -152,7 +152,7 @@ class Parser:
                 break
             if (stmt := self._declaration()):
                 stmts.append(stmt)
-        self._expect_next({Tk.RIGHT_BRACE}, "Expected '}' after block.")
+        self._expect_next({Tk.RIGHT_BRACE}, "Expect '}' after block.")
         return BlockStmt(stmts)
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
@@ -193,7 +193,7 @@ class Parser:
         left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression()
-            self._expect_next({Tk.RIGHT_PAREN}, "Expected ')' after expression.")
+            self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after expression.")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.UNARY))
@@ -206,7 +206,7 @@ class Parser:
         elif token_type is Tk.IDENTIFIER:
             left = VariableExpr(token)
         else:
-            raise LoxSyntaxError.at_token(token, "Expected expression.")
+            raise LoxSyntaxError.at_token(token, "Expect expression.")
 
         # Parse the operator and the RHS, if possible.
         while self._has_next():
@@ -228,7 +228,7 @@ class Parser:
                 # operator (between ? and :), parse the entirety of the expression.
                 if op_type is Tk.QUESTION:
                     middle = self._expression()
-                    self._expect_next({Tk.COLON}, "Expected ':' in ternary if operator.")
+                    self._expect_next({Tk.COLON}, "Expect ':' in ternary if operator.")
 
                 # Parse the RHS up to the current operator's precedence, taking associativity into account.
                 right = self._expression(_adjust_precedence_for_operator_associativity(prec, op_type))
