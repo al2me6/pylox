@@ -63,5 +63,5 @@ class AssignmentExpr(Expr):
 @dataclass
 class TernaryIfExpr(Expr):
     condition: Expr
-    true_branch: Expr
-    false_branch: Expr
+    then_branch: Expr
+    else_branch: Expr
