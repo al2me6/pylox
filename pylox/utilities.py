@@ -37,6 +37,7 @@ class Debug(Flag):
     NO_PARSE = auto()
     NO_INTERPRET = auto()
     JAVA_STYLE_TOKENS = auto()
+    REDUCED_ERROR_REPORTING = auto()
 
 
 def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Iterator[str]]:

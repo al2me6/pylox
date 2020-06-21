@@ -11,8 +11,8 @@ class Lox:
     PROMPT_CHARACTER = ">>> "
 
     def __init__(self, debug_flags: Debug = Debug(0)) -> None:
-        self.error_handler = LoxErrorHandler()
         self.debug_flags = debug_flags
+        self.error_handler = LoxErrorHandler(self.debug_flags)
         self.interpreter = Interpreter(self.error_handler)
 
     def run_file(self, path: str) -> None:

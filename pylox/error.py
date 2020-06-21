@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Iterator, Tuple
 
 from pylox.token import Token
-from pylox.utilities import eprint
+from pylox.utilities import Debug, eprint
 
 
 class LoxExit(SystemExit):
@@ -64,9 +64,10 @@ class LoxErrorHandler:
     LINE_NUMBER_SEPARATOR = " | "
     ERROR_MARKER = "^"
 
-    def __init__(self) -> None:
+    def __init__(self, debug_flags: Debug) -> None:
         self.error_state = False
         self._source = ""
+        self._debug_flags = debug_flags
 
     def clear_errors(self) -> None:
         self.error_state = False
@@ -143,7 +144,14 @@ class LoxErrorHandler:
             length: int
     ) -> None:
         """Output a formatted and underlined error and message to stderr."""
-        eprint(f"\t{line_number}{self.LINE_NUMBER_SEPARATOR}{line}")
-        arrow_spacer = "\t" + " " * (len(str(line_number)) + len(self.LINE_NUMBER_SEPARATOR) + (line_offset - length))
-        eprint(arrow_spacer + self.ERROR_MARKER * length)
-        eprint(f"{error_name}: Line {line_number}: {error_message}")
+        if not (self._debug_flags & Debug.REDUCED_ERROR_REPORTING):
+            eprint(f"\t{line_number}{self.LINE_NUMBER_SEPARATOR}{line}")
+            arrow_spacer = "\t" + " " * (
+                len(str(line_number))
+                + len(self.LINE_NUMBER_SEPARATOR)
+                + (line_offset - length)
+            )
+            eprint(arrow_spacer + self.ERROR_MARKER * length)
+            eprint(f"{error_name}: Line {line_number}: {error_message}")
+        else:
+            eprint(f"[line {line_number}] {error_name}: {error_message}")
