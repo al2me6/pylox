@@ -37,6 +37,8 @@ INFIX_OPERATOR_PRECEDENCE = {
     Tk.LESS_EQUAL: Prec.COMPARISON,
     Tk.EQUAL_EQUAL: Prec.EQUALITY,
     Tk.BANG_EQUAL: Prec.EQUALITY,
+    Tk.AND:Prec.AND,
+    Tk.OR: Prec.OR,
     Tk.QUESTION: Prec.TERNARY,
     Tk.EQUAL: Prec.ASSIGNMENT,
 }
@@ -238,6 +240,8 @@ class Parser:
                     left = TernaryIfExpr(left, middle, right)
                 elif op_type is Tk.EQUAL:
                     left = self._assignment_expression_parselet(op, left, right)
+                elif op_type in {Tk.AND, Tk.OR}:
+                    left = LogicalExpr(op, left, right)
                 else:
                     left = BinaryExpr(op, left, right)
             else:  # If it's not an operator, we're done.

@@ -183,3 +183,13 @@ class Interpreter(Visitor):
             expr.then_branch if _truthiness(self._evaluate(expr.condition))
             else expr.else_branch
         )
+
+    def _visit_LogicalExpr__(self, expr: LogicalExpr) -> Any:
+        left = self._evaluate(expr.left)
+        if expr.operator.token_type is Tk.OR:
+            if _truthiness(left):
+                return left
+        else:
+            if not _truthiness(left):
+                return left
+        return self._evaluate(expr.right)

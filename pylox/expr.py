@@ -65,3 +65,8 @@ class TernaryIfExpr(Expr):
     condition: Expr
     then_branch: Expr
     else_branch: Expr
+
+
+@dataclass
+class LogicalExpr(BinaryExpr):
+    pass
