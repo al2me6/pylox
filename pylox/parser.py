@@ -140,7 +140,9 @@ class Parser:
 
     def _statement(self) -> Stmt:
         stmt: Stmt
-        if self._tv.advance_if_match(Tk.IF):
+        if self._tv.advance_if_match(Tk.FOR):
+            stmt = self._for_statement_parselet()
+        elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
         elif self._tv.advance_if_match(Tk.LEFT_BRACE):
             stmt = self._block_statement_parselet()
@@ -150,8 +152,7 @@ class Parser:
         elif self._tv.advance_if_match(Tk.WHILE):
             stmt = self._while_statement_parselet()
         else:
-            stmt = ExpressionStmt(self._expression())
-            self._expect_semicolon()
+            stmt = self._expression_statement_parselet()
         return stmt
 
     def _block_statement_parselet(self) -> BlockStmt:
@@ -163,6 +164,38 @@ class Parser:
                 stmts.append(stmt)
         self._expect_next({Tk.RIGHT_BRACE}, "Expect '}' after block.")
         return BlockStmt(stmts)
+
+    def _expression_statement_parselet(self) -> ExpressionStmt:
+        stmt = ExpressionStmt(self._expression())
+        self._expect_semicolon()
+        return stmt
+
+    def _for_statement_parselet(self) -> Stmt:
+        self._expect_left_paren("after 'for'")
+
+        initializer: Optional[Stmt]
+        if self._tv.advance_if_match(Tk.SEMICOLON):
+            initializer = None
+        elif self._tv.advance_if_match(Tk.VAR):
+            initializer = self._variable_declaration_parselet()
+        else:
+            initializer = self._expression_statement_parselet()
+
+        condition = self._expression() if self._tv.peek() != Tk.SEMICOLON else LiteralExpr(True)
+        self._expect_semicolon("after loop condition")
+
+        increment = self._expression() if self._tv.peek() != Tk.RIGHT_PAREN else None
+        self._expect_right_paren("after for clauses")
+
+        body = self._statement()
+
+        if increment:
+            body = BlockStmt([body, ExpressionStmt(increment)])
+        body = WhileStmt(condition, body)
+        if initializer:
+            body = BlockStmt([initializer, body])
+
+        return body
 
     def _if_statement_parselet(self) -> IfStmt:
         self._expect_left_paren("after 'if'")
