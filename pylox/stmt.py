@@ -42,3 +42,10 @@ class BlockStmt(Stmt):
             for line in str(inner_stmt).splitlines():
                 inner_text += f"\t{line}\n"
         return f"<block:\n{inner_text}>"
+
+
+@dataclass
+class IfStmt(Stmt):
+    condition: Expr
+    then_branch: Stmt
+    else_branch: Optional[Stmt]

@@ -111,6 +111,12 @@ class Interpreter(Visitor):
             for inner_stmt in stmt.statements:
                 self._execute(inner_stmt)
 
+    def _visit_IfStmt__(self, stmt: IfStmt) -> None:
+        if _truthiness(self._evaluate(stmt.condition)):
+            self._execute(stmt.then_branch)
+        elif stmt.else_branch:
+            self._execute(stmt.else_branch)
+
     # ~~~ Expression interpreters ~~~
 
     def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
