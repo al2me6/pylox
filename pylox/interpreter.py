@@ -117,6 +117,10 @@ class Interpreter(Visitor):
         elif stmt.else_branch:
             self._execute(stmt.else_branch)
 
+    def _visit_WhileStmt__(self, stmt: WhileStmt) -> None:
+        while _truthiness(self._evaluate(stmt.condition)):
+            self._execute(stmt.body)
+
     # ~~~ Expression interpreters ~~~
 
     def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:

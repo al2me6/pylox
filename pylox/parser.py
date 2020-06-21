@@ -37,7 +37,7 @@ INFIX_OPERATOR_PRECEDENCE = {
     Tk.LESS_EQUAL: Prec.COMPARISON,
     Tk.EQUAL_EQUAL: Prec.EQUALITY,
     Tk.BANG_EQUAL: Prec.EQUALITY,
-    Tk.AND:Prec.AND,
+    Tk.AND: Prec.AND,
     Tk.OR: Prec.OR,
     Tk.QUESTION: Prec.TERNARY,
     Tk.EQUAL: Prec.ASSIGNMENT,
@@ -135,7 +135,9 @@ class Parser:
 
     def _statement(self) -> Stmt:
         stmt: Stmt
-        if self._tv.advance_if_match(Tk.IF):
+        if self._tv.advance_if_match(Tk.WHILE):
+            stmt = self._while_statement_parselet()
+        elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
             stmt = PrintStmt(self._expression())
@@ -146,6 +148,12 @@ class Parser:
             stmt = ExpressionStmt(self._expression())
             self._expect_semicolon()
         return stmt
+
+    def _while_statement_parselet(self) -> WhileStmt:
+        self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")
+        condition = self._expression()
+        self._expect_next({Tk.RIGHT_PAREN}, "Expect ')' after if condition.")
+        return WhileStmt(condition, body=self._statement())
 
     def _if_statement_parselet(self) -> IfStmt:
         self._expect_next({Tk.LEFT_PAREN}, "Expect '(' after 'if'.")

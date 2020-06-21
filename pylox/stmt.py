@@ -49,3 +49,9 @@ class IfStmt(Stmt):
     condition: Expr
     then_branch: Stmt
     else_branch: Optional[Stmt]
+
+
+@dataclass
+class WhileStmt(Stmt):
+    condition: Expr
+    body: Stmt
