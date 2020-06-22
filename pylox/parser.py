@@ -92,19 +92,19 @@ class Parser:
                 return True
         return False
 
-    def _expect_next(self, expected: Set[Tk], message: str) -> Token:
-        if self._tv.match(*expected):
+    def _expect_next(self, expected: Tk, message: str) -> Token:
+        if self._tv.match(expected):
             return self._tv.advance()
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message)
 
     def _expect_semicolon(self, message: str = "after expression") -> None:
-        self._expect_next({Tk.SEMICOLON}, f"Expect ';' {message}.")
+        self._expect_next(Tk.SEMICOLON, f"Expect ';' {message}.")
 
     def _expect_left_paren(self, message: str) -> None:
-        self._expect_next({Tk.LEFT_PAREN}, f"Expect '(' {message}.")
+        self._expect_next(Tk.LEFT_PAREN, f"Expect '(' {message}.")
 
     def _expect_right_paren(self, message: str) -> None:
-        self._expect_next({Tk.RIGHT_PAREN}, f"Expect ')' {message}.")
+        self._expect_next(Tk.RIGHT_PAREN, f"Expect ')' {message}.")
 
     def _synchronize(self) -> None:
         self._tv.advance()
@@ -133,7 +133,7 @@ class Parser:
         return decl
 
     def _variable_declaration_parselet(self) -> VarStmt:
-        name = self._expect_next({Tk.IDENTIFIER}, "Expect variable name.")
+        name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
         expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
         self._expect_semicolon()
         return VarStmt(name, expr)
@@ -162,7 +162,7 @@ class Parser:
                 break
             if (stmt := self._declaration()):
                 stmts.append(stmt)
-        self._expect_next({Tk.RIGHT_BRACE}, "Expect '}' after block.")
+        self._expect_next(Tk.RIGHT_BRACE, "Expect '}' after block.")
         return BlockStmt(stmts)
 
     def _expression_statement_parselet(self) -> ExpressionStmt:
@@ -284,7 +284,7 @@ class Parser:
                 # operator (between ? and :), parse the entirety of the expression.
                 if op_type is Tk.QUESTION:
                     middle = self._expression()
-                    self._expect_next({Tk.COLON}, "Expect ':' in ternary if operator.")
+                    self._expect_next(Tk.COLON, "Expect ':' in ternary if operator.")
 
                 # Parse the RHS up to the current operator's precedence, taking associativity into account.
                 right = self._expression(_adjust_precedence_for_operator_associativity(prec, op_type))
