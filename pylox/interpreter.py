@@ -5,7 +5,7 @@ from typing import List, Union
 from pylox.environment import Environment
 from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
-from pylox.lox_types import LoxObject, lox_division, lox_equality, lox_truth
+from pylox.lox_types import LoxObject, LoxPrimitive, lox_division, lox_equality, lox_object_to_str, lox_truth
 from pylox.stmt import *
 from pylox.token import Tk, Token
 from pylox.utilities import NOT_REACHED, are_of_expected_type

@@ -1,10 +1,11 @@
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
-from pylox.expr import VariableExpr
+if TYPE_CHECKING:
+    from pylox.expr import VariableExpr
 
 LoxLiteral = Union[str, float]
 LoxPrimitive = Union[float, str, bool, None]
-LoxObject = Union[LoxPrimitive, VariableExpr]
+LoxObject = Union[LoxPrimitive, "VariableExpr"]
 
 
 def lox_is_valid_identifier_start(char: Optional[str]) -> bool:
