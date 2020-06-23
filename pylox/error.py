@@ -72,7 +72,7 @@ class LoxErrorHandler:
     def clear_errors(self) -> None:
         self.error_state = False
 
-    def set_source(self, source) -> None:
+    def set_source(self, source: str) -> None:
         self._source = source
         self.clear_errors()
 
