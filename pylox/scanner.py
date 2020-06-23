@@ -1,29 +1,10 @@
 from typing import List, Optional, Tuple, Union
 
 from pylox.error import LoxErrorHandler, LoxSyntaxError
+from pylox.lox_types import LoxLiteral, lox_is_valid_identifier_name, lox_is_valid_identifier_start
 from pylox.streamview import StreamView
-from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, LiteralValue, Tk, Token
-from pylox.utilities import Debug, dump_internal
-
-# ~~~ Helper functions ~~~
-
-
-def _is_arabic_numeral(char: Optional[str]) -> bool:
-    if char is None:
-        return False
-    return char in "1234567890"
-
-
-def _is_valid_identifier_start(char: Optional[str]) -> bool:
-    if char is None:
-        return False
-    return char.isalpha() or char == "_"
-
-
-def _is_valid_identifier_name(char: Optional[str]) -> bool:
-    if char is None:
-        return False
-    return _is_valid_identifier_start(char) or char.isdigit()
+from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, Tk, Token
+from pylox.utilities import Debug, is_arabic_numeral, dump_internal
 
 
 class Scanner:
@@ -69,7 +50,7 @@ class Scanner:
     def _scan_token(self) -> None:
         """Scan the source stream for the next token and add it to the list"""
         char = self._sv.advance()
-        next_token: Union[Tk, Tuple[Tk, LiteralValue], None] = None
+        next_token: Union[Tk, Tuple[Tk, LoxLiteral], None] = None
 
         # Match compound tokens before similar single-character versions.
         if (doublet := char + str(self._sv.peek())) in COMPOUND_TOKENS:  # pylint: disable=superfluous-parens
@@ -83,9 +64,9 @@ class Scanner:
             next_token = self._string()
         elif char.isspace():  # Whitespaces are dropped.
             pass
-        elif _is_arabic_numeral(char):
+        elif is_arabic_numeral(char):
             next_token = self._number()
-        elif _is_valid_identifier_start(char):
+        elif lox_is_valid_identifier_start(char):
             next_token = self._identifier()
         else:  # What remains is an error.
             self._error_handler.err(LoxSyntaxError(self._sv.current_index, "Unexpected character."))
@@ -96,7 +77,7 @@ class Scanner:
             else:
                 self._add_token(next_token)
 
-    def _add_token(self, token_type: Tk, literal: LiteralValue = None) -> None:
+    def _add_token(self, token_type: Tk, literal: Optional[LoxLiteral] = None) -> None:
         """Add a new Token to the list using the passed type and optional literal value"""
         lexeme = self._sv.get_slice_from_marker()
         self._tokens.append(Token(token_type, lexeme, literal, self._sv.current_index))
@@ -132,20 +113,20 @@ class Scanner:
 
     def _number(self) -> Tuple[Tk, float]:
         """Consume an entire number."""
-        while _is_arabic_numeral(self._sv.peek()):
+        while is_arabic_numeral(self._sv.peek()):
             self._sv.advance()
         # Consume a decimal point, if there is one. Note that there must be another
         # digit after the decimal: as in, "1234." is not a valid number.
-        if self._sv.peek() == "." and _is_arabic_numeral(self._sv.peek(1)):
+        if self._sv.peek() == "." and is_arabic_numeral(self._sv.peek(1)):
             self._sv.advance()
-            while _is_arabic_numeral(self._sv.peek()):  # Consume any digits after the decimal point.
+            while is_arabic_numeral(self._sv.peek()):  # Consume any digits after the decimal point.
                 self._sv.advance()
         # Parse the value of the number directly with Python.
         return Tk.NUMBER, float(self._sv.get_slice_from_marker())
 
     def _identifier(self) -> Tk:
         """Consume an entire identifier and decide if it is a keyword."""
-        while _is_valid_identifier_name(self._sv.peek()):
+        while lox_is_valid_identifier_name(self._sv.peek()):
             self._sv.advance()
         # Add a keyword token if it is one, or an identifier otherwise.
         name = self._sv.get_slice_from_marker()
@@ -153,6 +134,3 @@ class Scanner:
             return Tk(f"@{name.upper()}")  # Keywords have enum values in the form "@KEYWORD".
         except ValueError:
             return Tk.IDENTIFIER
-
-
-__all__ = ("Scanner",)

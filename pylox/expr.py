@@ -1,12 +1,10 @@
 from abc import ABC
 from dataclasses import dataclass
-from typing import Union
 
+from pylox.lox_types import LoxPrimitive, lox_object_to_str
 from pylox.token import Token
-from pylox.utilities import ast_node_pretty_printer, lox_object_to_str
+from pylox.utilities import ast_node_pretty_printer
 from pylox.visitor import Visitable
-
-LoxLiteral = Union[float, str, bool, None]
 
 
 class Expr(Visitable, ABC):
@@ -40,7 +38,7 @@ class GroupingExpr(Expr):
 
 @dataclass
 class LiteralExpr(Expr):
-    value: LoxLiteral
+    value: LoxPrimitive
 
     def __str__(self) -> str:
         return lox_object_to_str(self.value)

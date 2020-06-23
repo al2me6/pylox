@@ -1,47 +1,15 @@
 from contextlib import contextmanager
 from operator import add, ge, gt, le, lt, mul, sub
-from typing import Any, List, Set, Type
+from typing import List, Union
 
 from pylox.environment import Environment
 from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
+from pylox.lox_types import LoxObject, lox_division, lox_equality, lox_truth
 from pylox.stmt import *
 from pylox.token import Tk, Token
-from pylox.utilities import NOT_REACHED, lox_object_to_str
+from pylox.utilities import NOT_REACHED, are_of_expected_type
 from pylox.visitor import Visitor
-
-
-def _check_types(expected_types: Set[Type], *obj: Any) -> bool:
-    """Check if the `obj`s passed are all of one of the expected types."""
-    for expected_type in expected_types:
-        if all(isinstance(o, expected_type) for o in obj):
-            return True
-    return False
-
-
-def _truthiness(obj: Any) -> bool:
-    """Evaluate the truthiness of a Lox object.
-
-    `false` and `nil` are the only falsy objects."""
-    if obj is None:
-        return False
-    if isinstance(obj, bool):
-        return obj
-    return True
-
-
-def _equality(left: Any, right: Any) -> bool:
-    """Evaluate if two Lox objects are equal."""
-    if type(left) is type(right):
-        return left == right
-    return False
-
-
-def _lox_division(left: float, right: float) -> float:
-    try:
-        return left / right
-    except ZeroDivisionError:
-        return float("nan")
 
 
 class Interpreter(Visitor):
@@ -63,23 +31,23 @@ class Interpreter(Visitor):
     def _execute(self, stmt: Stmt) -> None:
         stmt.accept(self)
 
-    def _evaluate(self, expr: Expr) -> Any:
+    def _evaluate(self, expr: Expr) -> LoxObject:
         return expr.accept(self)
 
-    def _expect_number_operand(self, operator: Token, *operand: Any) -> None:
+    def _expect_number_operand(self, operator: Token, *operand: LoxObject) -> None:
         """Enforce that the `operand`s passed are numbers. Otherwise,
         emit an error at the given `operator` token."""
-        if not _check_types({float}, *operand):
+        if not are_of_expected_type({float}, *operand):
             raise LoxRuntimeError.at_token(
                 operator,
                 "Operand must be a number." if len(operand) == 1 else "Operands must be numbers.",
                 fatal=True
             )
 
-    def _expect_number_or_string_operand(self, operator: Token, *operand: Any) -> None:
+    def _expect_number_or_string_operand(self, operator: Token, *operand: LoxObject) -> None:
         """Enforce that the `operand`s passed are all numbers or all strings.
         Otherwise, emit an error at the given `operator` token."""
-        if not _check_types({float, str}, *operand):
+        if not are_of_expected_type({float, str}, *operand):
             raise LoxRuntimeError.at_token(
                 operator, "Operands must be two numbers or two strings.", fatal=True
             )
@@ -103,7 +71,7 @@ class Interpreter(Visitor):
         self._evaluate(stmt.expression)
 
     def _visit_IfStmt__(self, stmt: IfStmt) -> None:
-        if _truthiness(self._evaluate(stmt.condition)):
+        if lox_truth(self._evaluate(stmt.condition)):
             self._execute(stmt.then_branch)
         elif stmt.else_branch:
             self._execute(stmt.else_branch)
@@ -112,23 +80,23 @@ class Interpreter(Visitor):
         print(lox_object_to_str(self._evaluate(stmt.expression)))
 
     def _visit_VarStmt__(self, stmt: VarStmt) -> None:
-        value: Any = None
+        value: LoxObject = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
         self._environment.define(stmt.name.lexeme, value)
 
     def _visit_WhileStmt__(self, stmt: WhileStmt) -> None:
-        while _truthiness(self._evaluate(stmt.condition)):
+        while lox_truth(self._evaluate(stmt.condition)):
             self._execute(stmt.body)
 
     # ~~~ Expression interpreters ~~~
 
-    def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> Any:
+    def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> LoxObject:
         value = self._evaluate(expr.value)
         self._environment.assign(expr.name, value)
         return value
 
-    def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Any:
+    def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Union[bool, float, str]:
         """Evaluate the two operands, ensure that their types match, and finally
         apply the correct binary operation.
 
@@ -141,14 +109,14 @@ class Interpreter(Visitor):
             Tk.PLUS: add,
             Tk.MINUS: sub,
             Tk.STAR: mul,
-            Tk.SLASH: _lox_division,
+            Tk.SLASH: lox_division,
             Tk.STAR_STAR: pow,
             Tk.GREATER: gt,
             Tk.GREATER_EQUAL: ge,
             Tk.LESS: lt,
             Tk.LESS_EQUAL: le,
-            Tk.EQUAL_EQUAL: _equality,
-            Tk.BANG_EQUAL: lambda l, r: not _equality(l, r),
+            Tk.EQUAL_EQUAL: lox_equality,
+            Tk.BANG_EQUAL: lambda l, r: not lox_equality(l, r),
         }
         if (op := expr.operator.token_type) in ops:
             # Note that we do not do implicit casts. That Pandora's box is not to be opened...
@@ -158,48 +126,48 @@ class Interpreter(Visitor):
                 pass
             else:  # Arithmetic operations and comparisons.
                 self._expect_number_operand(expr.operator, left, right)
-            return ops[op](left, right)  # type: ignore  # mypy is confused by the multiple signatures of pow()
+            return ops[op](left, right)  # type: ignore  # mypy is confused by the multiple signatures of pow().
 
         raise NOT_REACHED
 
-    def _visit_GroupingExpr__(self, expr: GroupingExpr) -> Any:
+    def _visit_GroupingExpr__(self, expr: GroupingExpr) -> LoxObject:
         """Evaluate a group by evaluating the expression contained within."""
         return self._evaluate(expr.expression)
 
-    def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxLiteral:
+    def _visit_LiteralExpr__(self, expr: LiteralExpr) -> LoxPrimitive:
         """A literal is evaluated by extracting its value."""
         return expr.value
 
-    def _visit_LogicalExpr__(self, expr: LogicalExpr) -> Any:
+    def _visit_LogicalExpr__(self, expr: LogicalExpr) -> LoxObject:
         left = self._evaluate(expr.left)
         if expr.operator.token_type is Tk.OR:
-            if _truthiness(left):
+            if lox_truth(left):
                 return left
         else:
-            if not _truthiness(left):
+            if not lox_truth(left):
                 return left
         return self._evaluate(expr.right)
 
-    def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> Any:
+    def _visit_TernaryIfExpr__(self, expr: TernaryIfExpr) -> LoxObject:
         """A ternary if operator is evaluated with... of course, another ternary if operator."""
         return self._evaluate(
-            expr.then_branch if _truthiness(self._evaluate(expr.condition))
+            expr.then_branch if lox_truth(self._evaluate(expr.condition))
             else expr.else_branch
         )
 
-    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Any:
+    def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Union[bool, float]:
         """Evaluate the operand and then apply the correct unary operation.
 
         There are two unary operations: logical negation and arithmetic negation."""
         right = self._evaluate(expr.right)
 
         if (op := expr.operator.token_type) is Tk.BANG:
-            return not _truthiness(right)
+            return not lox_truth(right)
         if op is Tk.MINUS:
             self._expect_number_operand(expr.operator, right)
-            return -right
+            return -right  # type: ignore  # Previous line ensures that right is of type float.
 
         raise NOT_REACHED
 
-    def _visit_VariableExpr__(self, expr: VariableExpr) -> Any:
+    def _visit_VariableExpr__(self, expr: VariableExpr) -> LoxObject:
         return self._environment.get(expr.name)
