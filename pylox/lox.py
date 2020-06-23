@@ -20,6 +20,7 @@ class Lox:
             self.run(fil.read())
 
     def run_interactive(self) -> None:
+        import readline  # pylint: disable=unused-import, import-outside-toplevel
         while True:
             try:
                 self.run(input(self.PROMPT_CHARACTER))
