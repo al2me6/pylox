@@ -24,7 +24,7 @@ class StreamView(Generic[T]):
     @overload
     def __getitem__(self, index: slice) -> Sequence[T]: pass
 
-    def __getitem__(self, index):
+    def __getitem__(self, index):  # type: ignore
         return self.sequence[index]
 
     def __len__(self) -> int:
@@ -90,7 +90,7 @@ class StreamView(Generic[T]):
     @overload
     def get_slice_from_marker(self) -> Sequence[T]: pass
 
-    def get_slice_from_marker(self):
+    def get_slice_from_marker(self):  # type: ignore
         """Return the slice from the marked position to the current value."""
         if self.marker_index is not None:
             return self[self.marker_index:self.current_index]

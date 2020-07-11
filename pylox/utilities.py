@@ -22,7 +22,7 @@ def dump_internal(name: str, *content: Any) -> None:
     print("~"*heading_length)
 
 
-def eprint(*args, **kwargs) -> None:
+def eprint(*args: Any, **kwargs: Any) -> None:
     """`print()` to stderr."""
     kwargs["file"] = sys.stderr
     print(*args, **kwargs)
