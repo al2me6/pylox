@@ -107,6 +107,8 @@ class Parser:
         self._expect_next(Tk.RIGHT_PAREN, f"Expect ')' {message}.")
 
     def _synchronize(self) -> None:
+        if not self._tv.has_next():
+            return
         self._tv.advance()
         while self._has_next():
             if self._tv.peek_unwrap(-1).token_type is Tk.SEMICOLON:
