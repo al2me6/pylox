@@ -29,8 +29,6 @@ def lox_object_to_str(obj: LoxObject) -> str:
         string = string[:-2]  # Output 100.0 as 100, etc.
     elif isinstance(obj, bool):
         string = string.lower()  # Convert "True" to "true", etc.
-    elif isinstance(obj, str):
-        string = f"'{string}'"
     return string
 
 
