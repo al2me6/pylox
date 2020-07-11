@@ -118,7 +118,7 @@ class Interpreter(Visitor):
             Tk.EQUAL_EQUAL: lox_equality,
             Tk.BANG_EQUAL: lambda l, r: not lox_equality(l, r),
         }
-        if (op := expr.operator.token_type) in ops:
+        if (op := expr.operator.token_type) in ops:  # pylint: disable=superfluous-parens
             # Note that we do not do implicit casts. That Pandora's box is not to be opened...
             if op is Tk.PLUS:  # Used for both arithmetic addition and string concatenation.
                 self._expect_number_or_string_operand(expr.operator, left, right)

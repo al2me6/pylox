@@ -79,7 +79,7 @@ class Parser:
 
     def parse(self) -> List[Stmt]:
         while self._has_next():
-            if (declaration := self._declaration()):
+            if declaration := self._declaration():
                 self._statements.append(declaration)
         if self._dump and not self._error_handler.error_state:
             dump_internal("AST", *self._statements)
@@ -163,7 +163,7 @@ class Parser:
         while self._has_next():
             if self._tv.peek_unwrap().token_type is Tk.RIGHT_BRACE:
                 break
-            if (stmt := self._declaration()):
+            if stmt := self._declaration():
                 stmts.append(stmt)
         self._expect_next(Tk.RIGHT_BRACE, "Expect '}' after block.")
         return BlockStmt(stmts)
@@ -273,7 +273,7 @@ class Parser:
             op_type = op.token_type
 
             # Parse infix operators.
-            if (prec := INFIX_OPERATOR_PRECEDENCE.get(op_type)):  # Check if the operator is valid.
+            if prec := INFIX_OPERATOR_PRECEDENCE.get(op_type):  # Check if the operator is valid.
                 # Check if the operator has high enough relative precedence for the parsed LHS to be
                 # bound to itself. If not, then we break out of this pass and return so that the LHS
                 # becomes the RHS of a previously half-parsed, higher-precedence operation.
