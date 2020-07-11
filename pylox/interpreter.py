@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from operator import add, ge, gt, le, lt, mul, sub
-from typing import List, Union
+from typing import Any, Callable, Dict, List, Union
 
 from pylox.environment import Environment
 from pylox.error import LoxErrorHandler, LoxRuntimeError
@@ -32,7 +32,7 @@ class Interpreter(Visitor):
         stmt.accept(self)
 
     def _evaluate(self, expr: Expr) -> LoxObject:
-        return expr.accept(self)
+        return expr.accept(self)  # type: ignore
 
     def _expect_number_operand(self, operator: Token, *operand: LoxObject) -> None:
         """Enforce that the `operand`s passed are numbers. Otherwise,
@@ -53,7 +53,7 @@ class Interpreter(Visitor):
             )
 
     @contextmanager
-    def sub_environment(self):
+    def sub_environment(self):  # type: ignore  # How to type this?
         # TODO: verify ownership
         outer = self._environment
         self._environment = Environment(outer)
@@ -105,12 +105,12 @@ class Interpreter(Visitor):
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
 
-        ops = {
+        ops: Dict[Tk, Callable[[Any, Any], Union[bool, float, str]]] = {
             Tk.PLUS: add,
             Tk.MINUS: sub,
             Tk.STAR: mul,
-            Tk.SLASH: lox_division,
             Tk.STAR_STAR: pow,
+            Tk.SLASH: lox_division,
             Tk.GREATER: gt,
             Tk.GREATER_EQUAL: ge,
             Tk.LESS: lt,
@@ -126,7 +126,7 @@ class Interpreter(Visitor):
                 pass
             else:  # Arithmetic operations and comparisons.
                 self._expect_number_operand(expr.operator, left, right)
-            return ops[op](left, right)  # type: ignore  # mypy is confused by the multiple signatures of pow().
+            return ops[op](left, right)
 
         raise NOT_REACHED
 
