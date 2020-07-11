@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import IntEnum, auto
 from typing import List, Optional, Set
 
@@ -7,6 +9,12 @@ from pylox.stmt import *
 from pylox.streamview import StreamView
 from pylox.token import Tk, Token
 from pylox.utilities import dump_internal
+
+RIGHT_ASSOCIATIVE_OPERATORS = {
+    Tk.STAR_STAR,
+    Tk.EQUAL,
+    Tk.QUESTION,
+}
 
 
 class Prec(IntEnum):
@@ -23,6 +31,11 @@ class Prec(IntEnum):
     UNARY = auto()
     CALL = auto()
     PRIMARY = auto()
+
+    def adjust_for_operator_associativity(self, op: Tk) -> Prec:
+        if op in RIGHT_ASSOCIATIVE_OPERATORS:
+            return self.__class__(self.value - 1)
+        return self
 
 
 INFIX_OPERATOR_PRECEDENCE = {
@@ -42,18 +55,6 @@ INFIX_OPERATOR_PRECEDENCE = {
     Tk.QUESTION: Prec.TERNARY,
     Tk.EQUAL: Prec.ASSIGNMENT,
 }
-
-RIGHT_ASSOCIATIVE_OPERATORS = {
-    Tk.STAR_STAR,
-    Tk.EQUAL,
-    Tk.QUESTION,
-}
-
-
-def _adjust_precedence_for_operator_associativity(prec: Prec, op: Tk) -> Prec:
-    if op in RIGHT_ASSOCIATIVE_OPERATORS:
-        return Prec(prec.value - 1)
-    return prec
 
 
 class Parser:
@@ -289,7 +290,7 @@ class Parser:
                     self._expect_next(Tk.COLON, "Expect ':' in ternary if operator.")
 
                 # Parse the RHS up to the current operator's precedence, taking associativity into account.
-                right = self._expression(_adjust_precedence_for_operator_associativity(prec, op_type))
+                right = self._expression(prec.adjust_for_operator_associativity(op_type))
 
                 # Build the new LHS.
                 if op_type is Tk.QUESTION:
