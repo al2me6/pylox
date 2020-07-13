@@ -85,7 +85,7 @@ class Token:
         """Compare a `TokenType` to a `Token`'s own type.
 
         i.e., a `Token` of type `FOO` is equal to `TokenType.FOO`. This provides better
-        ergonomics when used with `StreamView`, given the use-case of Token."""
+        ergonomics when used in a `StreamView`."""
         if isinstance(other, Tk):
             return self.token_type is other
         return super().__eq__(other)
@@ -94,7 +94,7 @@ class Token:
         attributes = ", ".join(
             f"{name}={repr(getattr(self, name))}"
             for name in ("lexeme", "literal")
-            if getattr(self, name)
+            if hasattr(self, name)
         )
         return f"{self.token_type.name}{': ' if attributes else ''}{attributes}"
 
