@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from pylox.expr import Expr
 from pylox.token import Token
-from pylox.utilities import ast_node_pretty_printer
+from pylox.utilities import ast_node_pretty_printer, indent
 from pylox.visitor import Visitable
 
 
@@ -21,10 +21,7 @@ class BlockStmt(Stmt):
     statements: List[Stmt]
 
     def __str__(self) -> str:
-        inner_text = ""
-        for inner_stmt in self.statements:
-            for line in str(inner_stmt).splitlines():
-                inner_text += f"\t{line}\n"
+        inner_text = "".join(indent(str(stmt)) for stmt in self.statements)
         return f"<block:\n{inner_text}>"
 
 
@@ -38,6 +35,10 @@ class IfStmt(Stmt):
     condition: Expr
     then_branch: Stmt
     else_branch: Optional[Stmt]
+
+    def __str__(self) -> str:
+        inner_text = "".join(indent(str(attr)) for attr in vars(self).values())
+        return f"<if:\n{inner_text}>"
 
 
 @dataclass

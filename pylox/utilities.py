@@ -51,4 +51,12 @@ def are_of_expected_type(expected_types: Set[Type[Any]], *obj: Any) -> bool:
     return False
 
 
+def indent(*block: str) -> str:
+    indented_str = ""
+    for blk in block:
+        for line in str(blk).splitlines():
+            indented_str += f"\t{line}\n"
+    return indented_str
+
+
 NOT_REACHED = AssertionError("Unreachable code reached")

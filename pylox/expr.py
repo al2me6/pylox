@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 
-from pylox.lox_types import LoxPrimitive, lox_object_to_str
+from pylox.lox_types import LoxPrimitive, lox_object_to_repr
 from pylox.token import Token
 from pylox.utilities import ast_node_pretty_printer
 from pylox.visitor import Visitable
@@ -41,7 +41,7 @@ class LiteralExpr(Expr):
     value: LoxPrimitive
 
     def __str__(self) -> str:
-        return lox_object_to_str(self.value)
+        return lox_object_to_repr(self.value)
 
 
 @dataclass

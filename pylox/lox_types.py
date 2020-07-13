@@ -32,6 +32,17 @@ def lox_object_to_str(obj: LoxObject) -> str:
     return string
 
 
+def lox_object_to_repr(obj: LoxObject) -> str:
+    if obj is None:
+        return "nil"
+    string = str(obj)
+    if isinstance(obj, bool):
+        string = string.lower()
+    elif isinstance(obj, str):
+        string = f"'{string}'"
+    return string
+
+
 def lox_truth(obj: LoxObject) -> bool:
     """Evaluate the truthiness of a Lox object.
 
