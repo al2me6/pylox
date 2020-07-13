@@ -147,6 +147,8 @@ class Parser:
             stmt = self._for_statement_parselet()
         elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
+        elif self._tv.advance_if_match(Tk.SWITCH):
+            stmt = self._switch_statement_parselet()
         elif self._tv.advance_if_match(Tk.LEFT_BRACE):
             stmt = self._block_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
@@ -207,6 +209,57 @@ class Parser:
         then_branch = self._statement()
         else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
+
+    def _switch_statement_parselet(self) -> BlockStmt:
+        self._expect_left_paren("after 'switch'")
+        condition = self._expression()
+        self._expect_right_paren("after switch condition")
+
+        # Cache the value being switched against so that it is only executed once.
+        mangled_ident = Token.create_arbitrary(Tk.IDENTIFIER, f"__{id(condition):x}")
+        block = BlockStmt([
+            VarStmt(mangled_ident, condition)
+        ])
+        cached_condition = VariableExpr(mangled_ident)
+
+        self._expect_next(Tk.LEFT_BRACE, "Expect '{' before switch arms")
+
+        switch: Optional[IfStmt] = None
+        inner_ref = switch  # Cache a reference to the innermost if statement.
+        default_action: Optional[Stmt] = None
+
+        # Build the tree of if statements.
+        while self._tv.peek() != Tk.RIGHT_BRACE:
+            arm_condition = self._expression()
+            self._expect_next(Tk.EQUAL_GREATER, "Expect '=>' after switch arm")
+            arm_action = self._statement()
+
+            if isinstance(arm_condition, VariableExpr) and arm_condition.name.lexeme == "_":  # Found the default arm.
+                if default_action is not None:  # If we've already got one, there's a problem.
+                    raise LoxSyntaxError.at_token(arm_condition.name, "Cannot have more than one default case.")
+                default_action = arm_action  # Otherwise, save it until the entire tree is built.
+            else:
+                arm = IfStmt(
+                    BinaryExpr(Token.create_arbitrary(Tk.EQUAL_EQUAL, "=="), cached_condition, arm_condition),
+                    arm_action,
+                    None
+                )
+                if inner_ref is None:  # Initialize the first if statement if necessary.
+                    switch = arm
+                else:
+                    inner_ref.else_branch = arm  # Add another if to the end of the tree.
+                inner_ref = arm  # Cache the inner if statement to avoid tree transversal on the the next pass.
+
+        self._expect_next(Tk.RIGHT_BRACE, "Expect '}' after switch arms")
+
+        if switch is None:
+            if default_action is not None:
+                block.statements.append(default_action)
+        else:
+            assert inner_ref is not None
+            inner_ref.else_branch = default_action
+            block.statements.append(switch)
+        return block
 
     def _while_statement_parselet(self) -> WhileStmt:
         self._expect_left_paren("after 'while'")

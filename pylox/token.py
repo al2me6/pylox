@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Iterator, Optional
@@ -27,6 +29,7 @@ class Tk(Enum):
     STAR_STAR = "**"
     BANG_EQUAL = "!="
     EQUAL_EQUAL = "=="
+    EQUAL_GREATER = "=>"
     GREATER_EQUAL = ">="
     LESS_EQUAL = "<="
     SLASH = auto()
@@ -43,6 +46,7 @@ class Tk(Enum):
     PRINT = "@PRINT"
     RETURN = "@RETURN"
     SUPER = "@SUPER"
+    SWITCH = "@SWITCH"
     THIS = "@THIS"
     TRUE = "@TRUE"
     VAR = "@VAR"
