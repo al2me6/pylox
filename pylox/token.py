@@ -81,6 +81,10 @@ class Token:
     literal: Optional[LoxLiteral]
     offset: int
 
+    @classmethod
+    def create_arbitrary(cls, token_type: Tk, lexeme: str, literal: Optional[LoxLiteral] = None) -> Token:
+        return cls(token_type, lexeme, literal, -1)
+
     def __eq__(self, other: Any) -> bool:
         """Compare a `TokenType` to a `Token`'s own type.
 
