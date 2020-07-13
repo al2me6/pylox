@@ -35,8 +35,6 @@ class Scanner:
             # At the beginning of a lexeme.
             self._sv.set_marker()
             self._scan_token()
-        # Mark the end of the stream.
-        self._sv.set_marker()
         self._add_token(Tk.EOF)
 
         if self._debug_flags & Debug.DUMP_TOKENS:
@@ -79,8 +77,13 @@ class Scanner:
 
     def _add_token(self, token_type: Tk, literal: Optional[LoxLiteral] = None) -> None:
         """Add a new Token to the list using the passed type and optional literal value"""
-        lexeme = self._sv.get_slice_from_marker()
-        self._tokens.append(Token(token_type, lexeme, literal, self._sv.current_index))
+        if token_type is Tk.EOF:  # EOF must be populated manually.
+            lexeme = "\0"
+            offset = self._sv.current_index + 1
+        else:
+            lexeme = self._sv.get_slice_from_marker()
+            offset = self._sv.current_index
+        self._tokens.append(Token(token_type, lexeme, literal, offset))
 
     # ~~~ Helpers for specific token types ~~~
 

@@ -66,14 +66,14 @@ class LoxErrorHandler:
 
     def __init__(self, debug_flags: Debug) -> None:
         self.error_state = False
-        self._source = ""
+        self._source = "\0"
         self._debug_flags = debug_flags
 
     def clear_errors(self) -> None:
         self.error_state = False
 
     def set_source(self, source: str) -> None:
-        self._source = source
+        self._source = source + "\0"
         self.clear_errors()
 
     def err(self, error: LoxError) -> None:
@@ -83,15 +83,7 @@ class LoxErrorHandler:
         :type error: LoxError
         """
         self.error_state = True  # TODO: track syntax vs runtime error and exit with corresponding error code.
-        line_number, line, line_offset = self._locate_in_line(error.offset)
-        self._report(
-            type(error).__name__,
-            error.message,
-            line,
-            line_number,
-            line_offset,
-            error.length
-        )
+        self._report(type(error).__name__, error.message, error.length, error.offset)
         if error.fatal:  # Force immediate exit.
             self.checkpoint()
 
@@ -109,9 +101,8 @@ class LoxErrorHandler:
         line_end_offset = 0
         for line_number, line in enumerate(self._source.split("\n"), start=1):
             line_end_offset += len(line)
-            if line_number > 1:  # Account for character lost to splitting.
-                line_end_offset += 1
             yield line_end_offset, line_number, line
+            line_end_offset += 1  # Account for character lost to splitting.
 
     def _locate_in_line(self, offset: int) -> Tuple[int, str, int]:
         """Locate a desired offset within a line and provide details about the line.
@@ -122,36 +113,33 @@ class LoxErrorHandler:
         :rtype: Tuple[int, str, int]
         """
         lines = self._source_as_lines()
-        line_start_offset = 0
-        line_end_offset = 0
+        line_start_offset = 1
+        line_end_offset = -1
         line_number = 1
         line = ""
         # Fetch the next line until the new line's end is ahead of the desired offset.
         # The fetched line thus contains the desired offset.
         while line_end_offset < offset:
-            line_start_offset = line_end_offset
+            line_start_offset = line_end_offset + 2
             line_end_offset, line_number, line = next(lines)
-        offset_from_line_start = offset - line_start_offset  # Calculate the relative offset.
+        offset_from_line_start = offset - line_start_offset + 1  # Calculate the relative offset.
         return line_number, line, offset_from_line_start
 
-    def _report(
-            self,
-            error_name: str,
-            error_message: str,
-            line: str,
-            line_number: int,
-            line_offset: int,
-            length: int
-    ) -> None:
+    def _report(self, error_type: str, message: str, length: int, offset: int) -> None:
         """Output a formatted and underlined error and message to stderr."""
-        if not (self._debug_flags & Debug.REDUCED_ERROR_REPORTING):
-            eprint(f"\t{line_number}{self.LINE_NUMBER_SEPARATOR}{line}")
+        line_number, line, line_offset = self._locate_in_line(offset)
+        if self._debug_flags & Debug.REDUCED_ERROR_REPORTING:  # Better aligns with JLox output.
+            if offset < len(self._source):
+                lexeme = f"'{line[line_offset-length:line_offset]}'"
+            else:
+                lexeme = "end"
+            eprint(f"[line {line_number}] {error_type} at {lexeme}: {message}")
+        else:
+            eprint(f"\n\t{line_number}{self.LINE_NUMBER_SEPARATOR}{line}")
             arrow_spacer = "\t" + " " * (
                 len(str(line_number))
                 + len(self.LINE_NUMBER_SEPARATOR)
                 + (line_offset - length)
             )
             eprint(arrow_spacer + self.ERROR_MARKER * length)
-            eprint(f"{error_name}: Line {line_number}: {error_message}")
-        else:
-            eprint(f"[line {line_number}] {error_name}: {error_message}")
+            eprint(f"{error_type}: Line {line_number}: {message}")
