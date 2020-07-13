@@ -1,0 +1,21 @@
+var a = 3;
+
+switch(a) {
+    1 => print "What?";
+    2 => {}
+    "Hello" => print "Two";
+    _ => {
+        print "Moo";  // expect: Moo
+    }
+}
+
+switch(a) {
+    -100.2 => print 0;
+    3 => print 42;  // expect: 42
+}
+
+switch(a) {
+    _ => print "Meow";  // expect: Meow
+}
+
+

@@ -1,0 +1,7 @@
+var a = 1;
+
+switch(a) {
+    1 => {}
+    _ => print "foo";
+    _ => print "bar"; // Error at '_': Cannot have more than one default case.
+}

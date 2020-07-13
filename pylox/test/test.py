@@ -46,7 +46,7 @@ OUT_ERROR_PARSER = re.compile(r'\[line (\d+)\] (LoxSyntaxError|LoxRuntimeError)(
 
 class Test:
     def __init__(self, path: Path) -> None:
-        self.path = path
+        self.path = path.resolve()
         self._expected_output: List[str] = list()
         self._expected_errors: List[str] = list()
 
@@ -80,7 +80,7 @@ class Test:
             if match := OUTPUT_EXPECT.search(line):
                 self._expected_output.append(match.group(1))
             if match := ERROR_EXPECT.search(line):
-                self._expected_errors.append(f"[line {line_number}] LoxSyntaxError at {match.group(2)}")
+                self._expected_errors.append(f"[line {line_number}] LoxSyntaxError at {match.group(1)}")
             if match := ERROR_LINE_EXPECT.search(line):
                 self._expected_errors.append(f"[line {match.group(2)}] LoxSyntaxError at {match.group(3)}")
             if match := RUNTIME_ERROR_EXPECT.search(line):
@@ -125,6 +125,7 @@ class Tester:
         "empty_file.lox",
         "precedence.lox",
         "unexpected_character.lox",
+        "../test_suite_extensions"
     )
 
     def __init__(self) -> None:
