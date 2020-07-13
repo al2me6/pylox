@@ -14,7 +14,7 @@ import sys
 from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
 from operator import eq
 from pathlib import Path
-from typing import Collection, List, Optional, Sequence
+from typing import Collection, List, Optional, Sequence, TypeVar
 
 from termcolor import colored
 
@@ -27,18 +27,21 @@ def indent(*block: str) -> str:
     return "\n".join(f"\t{line}" for blk in block for line in blk.splitlines())
 
 
-def compare_inner(left: Collection, right: Collection) -> bool:
+T = TypeVar("T")
+
+
+def compare_inner(left: Collection[T], right: Collection[T]) -> bool:
     if len(left) != len(right):
         return False
     return all(map(eq, left, right))
 
 
 OUTPUT_EXPECT = re.compile(r'// expect: ?(.*)')
-ERROR_EXPECT = re.compile(r'// Error( at (end|\'[^\']+\'))?(.*)')
-ERROR_LINE_EXPECT = re.compile(r'// \[line (\d+)\] Error( at (end|\'[^\']+\'))?(.*)')
+ERROR_EXPECT = re.compile(r'// Error at ((end|\'[^\']+\')(.*))')
+ERROR_LINE_EXPECT = re.compile(r'// \[(java )?line (\d+)\] Error at ((end|\'[^\']+\')(.*))')
 RUNTIME_ERROR_EXPECT = re.compile(r'// expect runtime error: (.+)')
 
-OUT_ERROR_PARSER = re.compile(r'\[line (\d+)\] ((LoxSyntaxError|LoxRuntimeError).*)')
+OUT_ERROR_PARSER = re.compile(r'\[line (\d+)\] (LoxSyntaxError|LoxRuntimeError)( at .*):(.*)')
 
 
 class Test:
@@ -74,13 +77,13 @@ class Test:
         # TODO: support "Error at "symbol" expectations.
         expect_runtime_error = list()
         for line_number, line in enumerate(source.splitlines(), start=1):
-            if (match := OUTPUT_EXPECT.search(line)):
+            if match := OUTPUT_EXPECT.search(line):
                 self._expected_output.append(match.group(1))
-            if (match := ERROR_EXPECT.search(line)):
-                self._expected_errors.append(f"[line {line_number}] LoxSyntaxError{match.group(3)}")
-            if (match := ERROR_LINE_EXPECT.search(line)):
-                self._expected_errors.append(f"[line {match.group(1)}] LoxSyntaxError{match.group(4)}")
-            if (match := RUNTIME_ERROR_EXPECT.search(line)):
+            if match := ERROR_EXPECT.search(line):
+                self._expected_errors.append(f"[line {line_number}] LoxSyntaxError at {match.group(2)}")
+            if match := ERROR_LINE_EXPECT.search(line):
+                self._expected_errors.append(f"[line {match.group(2)}] LoxSyntaxError at {match.group(3)}")
+            if match := RUNTIME_ERROR_EXPECT.search(line):
                 if self._expected_errors:
                     raise RuntimeError("Cannot have both compile- and runtime errors.")
                 expect_runtime_error.append(f"[line {line_number}] LoxRuntimeError: {match.group(1)}")
@@ -88,11 +91,19 @@ class Test:
 
     def _verify(self, output: Sequence[str], errors: Sequence[str]) -> Optional[str]:
         error_message = "Expect:\n{}\nEncountered:\n{}\n"
+        errors = tuple(map(self._reformat_pylox_error, errors))
         if not compare_inner(errors, self._expected_errors):
             return error_message.format(indent(*self._expected_errors), indent(*errors))
         if not compare_inner(output, self._expected_output):
             return error_message.format(indent(*self._expected_output), indent(*output))
         return None
+
+    def _reformat_pylox_error(self, err: str) -> str:
+        if match := OUT_ERROR_PARSER.search(err):
+            if match.group(2) == "LoxRuntimeError":
+                return f"[line {match.group(1)}] LoxRuntimeError:{match.group(4)}"
+            return err
+        raise RuntimeError(f"Unexpected error output format: {err}")
 
 
 class Tester:
@@ -153,12 +164,12 @@ class Tester:
             sys.exit()
 
     @contextmanager
-    def _apply_special_options(self, *options: Debug):
+    def _apply_special_options(self, *options: Debug):  # type: ignore
         for option in options:
             self._lox_instance.debug_flags |= option
         yield
         for option in options:
-            self._lox_instance.debug_flags &= ~option
+            self._lox_instance.debug_flags ^= option
 
     def _discover_and_queue_tests(self, path: Path) -> None:
         assert path.exists()
