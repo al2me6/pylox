@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import List, Optional, Set
+from typing import Iterator, List, Optional
 
 from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.expr import *
@@ -38,7 +38,8 @@ class Prec(IntEnum):
         return self
 
 
-INFIX_OPERATOR_PRECEDENCE = {
+OPERATOR_PRECEDENCE = {
+    Tk.LEFT_PAREN: Prec.CALL,
     Tk.STAR_STAR: Prec.EXP,
     Tk.STAR: Prec.FACTOR,
     Tk.SLASH: Prec.FACTOR,
@@ -268,7 +269,7 @@ class Parser:
         return WhileStmt(condition, body=self._statement())
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
-        """The core of the Pratt parser.
+        """Pratt parser.
 
             Ex. parsing "a / b ** c ** d + -e"
             > Parsed (a).
@@ -325,8 +326,7 @@ class Parser:
             op = self._tv.peek_unwrap()
             op_type = op.token_type
 
-            # Parse infix operators.
-            if prec := INFIX_OPERATOR_PRECEDENCE.get(op_type):  # Check if the operator is valid.
+            if prec := OPERATOR_PRECEDENCE.get(op_type):  # Check if the operator is valid.
                 # Check if the operator has high enough relative precedence for the parsed LHS to be
                 # bound to itself. If not, then we break out of this pass and return so that the LHS
                 # becomes the RHS of a previously half-parsed, higher-precedence operation.
@@ -342,11 +342,15 @@ class Parser:
                     middle = self._expression()
                     self._expect_next(Tk.COLON, "Expect ':' in ternary if operator.")
 
-                # Parse the RHS up to the current operator's precedence, taking associativity into account.
-                right = self._expression(prec.adjust_for_operator_associativity(op_type))
+                if op_type not in {Tk.LEFT_PAREN}:  # Postfix operators do not have an RHS expression.
+                    # Otherwise, parse the RHS up to the current operator's precedence,
+                    # taking right associativity into account, if necessary.
+                    right = self._expression(prec.adjust_for_operator_associativity(op_type))
 
                 # Build the new LHS.
-                if op_type is Tk.QUESTION:
+                if op_type is Tk.LEFT_PAREN:
+                    left = CallExpr(left, op, list(self._expression_list()))
+                elif op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)
                 elif op_type is Tk.EQUAL:
                     left = self._assignment_expression_parselet(op, left, right)
@@ -358,6 +362,13 @@ class Parser:
                 break
 
         return left
+
+    def _expression_list(self, *, separator: Tk = Tk.COMMA, closing: Tk = Tk.RIGHT_PAREN) -> Iterator[Expr]:
+        while self._tv.peek() != closing:
+            yield self._expression()
+            if not self._tv.advance_if_match(separator):
+                break
+        self._expect_next(closing, f"Expected '{closing.value}' after expression.")
 
     def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
         if isinstance(left, VariableExpr):

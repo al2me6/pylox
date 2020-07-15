@@ -32,6 +32,13 @@ class BinaryExpr(Expr):
 
 
 @dataclass
+class CallExpr(Expr):
+    callee: Expr
+    paren: Token
+    arguments: List[Expr]
+
+
+@dataclass
 class GroupingExpr(Expr):
     expression: Expr
 
