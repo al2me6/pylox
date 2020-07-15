@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from typing import List
 
 from pylox.lox_types import LoxPrimitive, lox_object_to_repr
 from pylox.token import Token
