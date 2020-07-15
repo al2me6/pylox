@@ -99,14 +99,8 @@ class Parser:
             return self._tv.advance()
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message)
 
-    def _expect_semicolon(self, message: str = "after expression") -> None:
-        self._expect_next(Tk.SEMICOLON, f"Expect ';' {message}.")
-
-    def _expect_left_paren(self, message: str) -> None:
-        self._expect_next(Tk.LEFT_PAREN, f"Expect '(' {message}.")
-
-    def _expect_right_paren(self, message: str) -> None:
-        self._expect_next(Tk.RIGHT_PAREN, f"Expect ')' {message}.")
+    def _expect_punct(self, symbol: Tk, message: str) -> None:
+        self._expect_next(symbol, f"Expect '{symbol.value}' {message}.")
 
     def _synchronize(self) -> None:
         if not self._tv.has_next():
@@ -139,7 +133,7 @@ class Parser:
     def _variable_declaration_parselet(self) -> VarStmt:
         name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
         expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
-        self._expect_semicolon()
+        self._expect_punct(Tk.SEMICOLON, "after expression")
         return VarStmt(name, expr)
 
     def _statement(self) -> Stmt:
@@ -154,7 +148,7 @@ class Parser:
             stmt = self._block_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
             stmt = PrintStmt(self._expression())
-            self._expect_semicolon()
+            self._expect_punct(Tk.SEMICOLON, "after expression")
         elif self._tv.advance_if_match(Tk.WHILE):
             stmt = self._while_statement_parselet()
         else:
@@ -168,16 +162,16 @@ class Parser:
                 break
             if stmt := self._declaration():
                 stmts.append(stmt)
-        self._expect_next(Tk.RIGHT_BRACE, "Expect '}' after block.")
+        self._expect_punct(Tk.RIGHT_BRACE, "after block")
         return BlockStmt(stmts)
 
     def _expression_statement_parselet(self) -> ExpressionStmt:
         stmt = ExpressionStmt(self._expression())
-        self._expect_semicolon()
+        self._expect_punct(Tk.SEMICOLON, "after expression")
         return stmt
 
     def _for_statement_parselet(self) -> Stmt:
-        self._expect_left_paren("after 'for'")
+        self._expect_punct(Tk.LEFT_PAREN, "after 'for'")
 
         initializer: Optional[Stmt]
         if self._tv.advance_if_match(Tk.SEMICOLON):
@@ -188,10 +182,10 @@ class Parser:
             initializer = self._expression_statement_parselet()
 
         condition = self._expression() if self._tv.peek() != Tk.SEMICOLON else LiteralExpr(True)
-        self._expect_semicolon("after loop condition")
+        self._expect_punct(Tk.SEMICOLON, "after loop condition")
 
         increment = self._expression() if self._tv.peek() != Tk.RIGHT_PAREN else None
-        self._expect_right_paren("after for clauses")
+        self._expect_punct(Tk.RIGHT_PAREN, "after for clauses")
 
         body = self._statement()
 
@@ -204,17 +198,17 @@ class Parser:
         return body
 
     def _if_statement_parselet(self) -> IfStmt:
-        self._expect_left_paren("after 'if'")
+        self._expect_punct(Tk.LEFT_PAREN, "after 'if'")
         condition = self._expression()
-        self._expect_right_paren("after if condition")
+        self._expect_punct(Tk.RIGHT_PAREN, "after if condition")
         then_branch = self._statement()
         else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
 
     def _switch_statement_parselet(self) -> BlockStmt:
-        self._expect_left_paren("after 'switch'")
+        self._expect_punct(Tk.LEFT_PAREN, "after 'switch'")
         condition = self._expression()
-        self._expect_right_paren("after switch condition")
+        self._expect_punct(Tk.RIGHT_PAREN, "after switch condition")
 
         # Cache the value being switched against so that it is only executed once.
         mangled_ident = Token.create_arbitrary(Tk.IDENTIFIER, f"__{id(condition):x}")
@@ -263,9 +257,9 @@ class Parser:
         return block
 
     def _while_statement_parselet(self) -> WhileStmt:
-        self._expect_left_paren("after 'while'")
+        self._expect_punct(Tk.LEFT_PAREN, "after 'while'")
         condition = self._expression()
-        self._expect_right_paren("after while condition")
+        self._expect_punct(Tk.RIGHT_PAREN, "after while condition")
         return WhileStmt(condition, body=self._statement())
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
@@ -306,7 +300,7 @@ class Parser:
         left: Expr
         if (token_type := token.token_type) is Tk.LEFT_PAREN:
             enclosed = self._expression()
-            self._expect_right_paren("after expression")
+            self._expect_punct(Tk.RIGHT_PAREN, "after expression")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.UNARY))
@@ -340,7 +334,7 @@ class Parser:
                 # operator (between ? and :), parse the entirety of the expression.
                 if op_type is Tk.QUESTION:
                     middle = self._expression()
-                    self._expect_next(Tk.COLON, "Expect ':' in ternary if operator.")
+                    self._expect_punct(Tk.COLON, "in ternary if operator")
 
                 if op_type not in {Tk.LEFT_PAREN}:  # Postfix operators do not have an RHS expression.
                     # Otherwise, parse the RHS up to the current operator's precedence,
