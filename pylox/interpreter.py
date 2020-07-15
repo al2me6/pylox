@@ -14,10 +14,11 @@ from pylox.visitor import Visitor
 
 class Interpreter(Visitor):
     # pylint: disable=invalid-name
+    _environment: Environment
 
     def __init__(self, error_handler: LoxErrorHandler) -> None:
         self._error_handler = error_handler
-        self._environment = Environment()
+        self.reset_environment()
 
     def interpret(self, stmts: List[Stmt]) -> None:
         try:
@@ -26,7 +27,13 @@ class Interpreter(Visitor):
         except LoxRuntimeError as error:
             self._error_handler.err(error)
 
+    def reset_environment(self) -> None:
+        self._environment = self._initialize_environment()
+
     # ~~~ Helper functions ~~~
+
+    def _initialize_environment(self) -> Environment:
+        return Environment()
 
     def _execute(self, stmt: Stmt) -> None:
         stmt.accept(self)
@@ -48,9 +55,7 @@ class Interpreter(Visitor):
         """Enforce that the `operand`s passed are all numbers or all strings.
         Otherwise, emit an error at the given `operator` token."""
         if not are_of_expected_type({float, str}, *operand):
-            raise LoxRuntimeError.at_token(
-                operator, "Operands must be two numbers or two strings.", fatal=True
-            )
+            raise LoxRuntimeError.at_token(operator, "Operands must be two numbers or two strings.", fatal=True)
 
     @contextmanager
     def sub_environment(self):  # type: ignore  # How to type this?

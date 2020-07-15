@@ -51,6 +51,8 @@ class Test:
         self._expected_errors: List[str] = list()
 
     def execute(self, lox_instance: Lox) -> bool:
+        lox_instance.interpreter.reset_environment()
+
         out_capture = io.StringIO()
         err_capture = io.StringIO()
         with self.path.open("r") as fil:
@@ -125,7 +127,7 @@ class Tester:
         "empty_file.lox",
         "precedence.lox",
         "unexpected_character.lox",
-        "../test_suite_extensions"
+        "../test_suite_extensions",
     )
 
     def __init__(self) -> None:
