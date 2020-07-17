@@ -1,6 +1,6 @@
 import sys
 
-from pylox.error import LoxErrorHandler, LoxExit
+from pylox.error import LoxErrorHandler, LoxExit, catch_internal_error
 from pylox.interpreter import Interpreter
 from pylox.parser import Parser
 from pylox.scanner import Scanner
@@ -30,25 +30,26 @@ class Lox:
                 sys.exit(0)
 
     def run(self, source: str) -> None:
-        source = source.replace("\r\n", "\n")
-        self.error_handler.set_source(source)
+        with catch_internal_error(dump_backtrace=bool(self.debug_flags & Debug.BACKTRACE), ignore_types=(LoxExit,)):
+            source = source.replace("\r\n", "\n")
+            self.error_handler.set_source(source)
 
-        tokens = Scanner(
-            source,
-            self.error_handler,
-            debug_flags=self.debug_flags
-        ).scan_tokens()
+            tokens = Scanner(
+                source,
+                self.error_handler,
+                debug_flags=self.debug_flags
+            ).scan_tokens()
 
-        self.error_handler.checkpoint()
-        if self.debug_flags & Debug.NO_PARSE:
-            raise LoxExit(0)
-        statements = Parser(
-            tokens,
-            self.error_handler,
-            dump=bool(self.debug_flags & Debug.DUMP_AST)
-        ).parse()
+            self.error_handler.checkpoint()
+            if self.debug_flags & Debug.NO_PARSE:
+                raise LoxExit(0)
+            statements = Parser(
+                tokens,
+                self.error_handler,
+                dump=bool(self.debug_flags & Debug.DUMP_AST)
+            ).parse()
 
-        self.error_handler.checkpoint()
-        if self.debug_flags & Debug.NO_INTERPRET:
-            raise LoxExit(0)
-        self.interpreter.interpret(statements)
+            self.error_handler.checkpoint()
+            if self.debug_flags & Debug.NO_INTERPRET:
+                raise LoxExit(0)
+            self.interpreter.interpret(statements)

@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     args, extra_args = parser.parse_known_args()
 
-    lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug(0)))  # Collapse all flags passed.
+    lox = Lox(reduce(lambda a, b: a | Debug[b], args.dbg, Debug.BACKTRACE))  # Collapse all flags passed.
     if args.c:
         lox.run(args.c)
     elif args.source:

@@ -12,6 +12,7 @@ class Debug(Flag):
     NO_INTERPRET = auto()
     JAVA_STYLE_TOKENS = auto()
     REDUCED_ERROR_REPORTING = auto()
+    BACKTRACE = auto()
 
 
 def dump_internal(name: str, *content: Any) -> None:

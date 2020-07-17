@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Type
 
 from pylox.token import Token
 from pylox.utilities import Debug, eprint
@@ -143,3 +143,29 @@ class LoxErrorHandler:
             )
             eprint(arrow_spacer + self.ERROR_MARKER * length)
             eprint(f"{error_type}: Line {line_number}: {message}")
+
+
+class catch_internal_error:  # pylint: disable=invalid-name
+    def __init__(self, *, dump_backtrace: bool, ignore_types: Tuple[Type[BaseException]]) -> None:
+        self._dump_backtrace = dump_backtrace
+        self._ignore_types = ignore_types
+
+    def __enter__(self) -> None:
+        return
+
+    def __exit__(self, error_type: Type[BaseException], error: BaseException, tb) -> bool:  # type: ignore
+        if error is not None:
+            if isinstance(error, self._ignore_types):
+                raise error
+            if self._dump_backtrace:
+                import traceback  # pylint: disable=import-outside-toplevel
+                traceback.print_exception(error_type, error, tb)
+                eprint("\nPylox crashed due to the internal error above.")
+            else:
+                eprint(
+                    f"Pylox crashed due to an internal {error_type.__name__}.",
+                    "For more information, run pylox with --dbg BACKTRACE.",
+                    sep="\n"
+                )
+            raise LoxExit(1)
+        return True
