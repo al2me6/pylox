@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, TypeVar, Union
 
 from pylox.error import LoxErrorHandler, LoxSyntaxError
 from pylox.expr import *
@@ -114,6 +114,23 @@ class Parser:
             self._tv.advance()
         return
 
+    T = TypeVar("T")
+
+    def _parse_repeatedly(
+            self, parselet: Callable[[], Union[T, Optional[T]]],
+            *,
+            separator: Optional[Tk] = Tk.COMMA,
+            terminator: Tk = Tk.RIGHT_PAREN,
+            terminator_expect_message: str = "after expression"
+    ) -> Iterator[T]:
+        while self._tv.peek() != terminator:
+            if (result := parselet()) is not None:
+                yield result
+            if separator is not None:
+                if not self._tv.advance_if_match(separator):
+                    break
+        self._expect_next(terminator, f"Expected '{terminator.value}' {terminator_expect_message}.")
+
     # ~~~ Parsers ~~~
 
     def _declaration(self) -> Optional[Stmt]:
@@ -156,14 +173,13 @@ class Parser:
         return stmt
 
     def _block_statement_parselet(self) -> BlockStmt:
-        stmts: List[Stmt] = list()
-        while self._has_next():
-            if self._tv.peek_unwrap().token_type is Tk.RIGHT_BRACE:
-                break
-            if stmt := self._declaration():
-                stmts.append(stmt)
-        self._expect_punct(Tk.RIGHT_BRACE, "after block")
-        return BlockStmt(stmts)
+        stmts = self._parse_repeatedly(
+            self._declaration,
+            separator=None,
+            terminator=Tk.RIGHT_BRACE,
+            terminator_expect_message="after block"
+        )
+        return BlockStmt(list(stmts))
 
     def _expression_statement_parselet(self) -> ExpressionStmt:
         stmt = ExpressionStmt(self._expression())
@@ -356,13 +372,6 @@ class Parser:
                 break
 
         return left
-
-    def _expression_list(self, *, separator: Tk = Tk.COMMA, closing: Tk = Tk.RIGHT_PAREN) -> Iterator[Expr]:
-        while self._tv.peek() != closing:
-            yield self._expression()
-            if not self._tv.advance_if_match(separator):
-                break
-        self._expect_next(closing, f"Expected '{closing.value}' after expression.")
 
     def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
         if isinstance(left, VariableExpr):
