@@ -18,10 +18,10 @@ class Stmt(Visitable, ABC):
 
 @dataclass
 class BlockStmt(Stmt):
-    statements: List[Stmt]
+    body: List[Stmt]
 
     def __str__(self) -> str:
-        inner_text = "".join(indent(str(stmt)) for stmt in self.statements)
+        inner_text = "".join(indent(str(stmt)) for stmt in self.body)
         return f"<block:\n{inner_text}>"
 
 
