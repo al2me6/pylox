@@ -31,6 +31,18 @@ class ExpressionStmt(Stmt):
 
 
 @dataclass
+class FunctionStmt(Stmt):
+    name: Token
+    params: List[Token]
+    body: List[Stmt]
+
+    def __str__(self) -> str:
+        params_text = ", ".join(map(str, self.params))
+        body_text = "".join(indent(str(stmt)) for stmt in self.body)
+        return f"<function: {self.name.lexeme}, [{params_text}]\n{body_text}>"
+
+
+@dataclass
 class IfStmt(Stmt):
     condition: Expr
     then_branch: Stmt

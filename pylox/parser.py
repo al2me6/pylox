@@ -140,6 +140,8 @@ class Parser:
         try:
             if self._tv.advance_if_match(Tk.VAR):
                 decl = self._variable_declaration_parselet()
+            elif self._tv.advance_if_match(Tk.FUN):
+                decl = self._callable_object_parselet(kind="function")
             else:
                 decl = self._statement()
         except LoxSyntaxError as error:
@@ -148,6 +150,17 @@ class Parser:
             decl = None
 
         return decl
+
+    def _callable_object_parselet(self, *, kind: str) -> FunctionStmt:
+        name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
+        self._expect_punct(Tk.LEFT_PAREN, f"after {kind} name")
+        params = list(self._parse_repeatedly(
+            lambda: self._expect_next(Tk.IDENTIFIER, "Expect parameter name."),
+            terminator_expect_message="after parameters"
+        ))
+        self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
+        body = self._block_statement_parselet().body
+        return FunctionStmt(name, params, body)
 
     def _variable_declaration_parselet(self) -> VarStmt:
         name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
@@ -361,7 +374,7 @@ class Parser:
 
                 # Build the new LHS.
                 if op_type is Tk.LEFT_PAREN:
-                    left = CallExpr(left, op, list(self._expression_list()))
+                    left = CallExpr(left, op, list(self._parse_repeatedly(self._expression)))
                 elif op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)
                 elif op_type is Tk.EQUAL:
