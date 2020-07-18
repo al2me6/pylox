@@ -124,6 +124,8 @@ class Parser:
             terminator_expect_message: str = "after expression"
     ) -> Iterator[T]:
         while self._tv.peek() != terminator:
+            if not self._has_next():
+                break
             if (result := parselet()) is not None:
                 yield result
             if separator is not None:
