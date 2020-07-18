@@ -38,6 +38,9 @@ class CallExpr(Expr):
     paren: Token
     arguments: List[Expr]
 
+    def __str__(self) -> str:
+        return f"(call {self.callee} [{', '.join(map(str, self.arguments))}])"
+
 
 @dataclass
 class GroupingExpr(Expr):
