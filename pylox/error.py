@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC
 from typing import Iterator, Tuple, Type
 
+import sys
+
 from pylox.token import Token
 from pylox.utilities import Debug, eprint
 
@@ -167,5 +169,5 @@ class catch_internal_error:  # pylint: disable=invalid-name
                     "For more information, run pylox with --dbg BACKTRACE.",
                     sep="\n"
                 )
-            raise LoxExit(1)
+            sys.exit(1)
         return True
