@@ -123,12 +123,12 @@ class Parser:
             terminator: Tk = Tk.RIGHT_PAREN,
             terminator_expect_message: str = "after expression"
     ) -> Iterator[T]:
-        while self._tv.peek() != terminator:
-            if not self._has_next():
+        while self._has_next():
+            if self._tv.peek_unwrap().token_type is terminator:
                 break
-            if (result := parselet()) is not None:
+            if result := parselet():
                 yield result
-            if separator is not None:
+            if separator:
                 if not self._tv.advance_if_match(separator):
                     break
         self._expect_next(terminator, f"Expected '{terminator.value}' {terminator_expect_message}.")
