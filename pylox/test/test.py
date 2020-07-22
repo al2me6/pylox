@@ -51,7 +51,7 @@ class Test:
         self._expected_errors: List[str] = list()
 
     def execute(self, lox_instance: Lox) -> bool:
-        lox_instance.interpreter.reset_environment()
+        lox_instance.interpreter.reinitialize_environment()
 
         out_capture = io.StringIO()
         err_capture = io.StringIO()

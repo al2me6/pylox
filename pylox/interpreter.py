@@ -14,11 +14,12 @@ from pylox.visitor import Visitor
 
 class Interpreter(Visitor):
     # pylint: disable=invalid-name
+    _global: Environment
     _environment: Environment
 
     def __init__(self, error_handler: LoxErrorHandler) -> None:
         self._error_handler = error_handler
-        self.reset_environment()
+        self.reinitialize_environment()
 
     def interpret(self, stmts: List[Stmt]) -> None:
         try:
@@ -27,13 +28,12 @@ class Interpreter(Visitor):
         except LoxRuntimeError as error:
             self._error_handler.err(error)
 
-    def reset_environment(self) -> None:
-        self._environment = self._initialize_environment()
+    def reinitialize_environment(self) -> None:
+        # TODO: add proper globals & namespacing, native functions
+        self._global = Environment()
+        self._environment = self._global
 
     # ~~~ Helper functions ~~~
-
-    def _initialize_environment(self) -> Environment:
-        return Environment()
 
     def _execute(self, stmt: Stmt) -> None:
         stmt.accept(self)
@@ -58,12 +58,13 @@ class Interpreter(Visitor):
             raise LoxRuntimeError.at_token(operator, "Operands must be two numbers or two strings.", fatal=True)
 
     @contextmanager
-    def sub_environment(self):  # type: ignore  # How to type this?
-        # TODO: verify ownership
+    def sub_environment(self, *, clean: bool = False):  # type: ignore  # How to type this?
         outer = self._environment
-        self._environment = Environment(outer)
-        yield
-        self._environment = outer
+        self._environment = Environment(self._global if clean else outer)
+        try:
+            yield
+        finally:
+            self._environment = outer
 
     # ~~~ Statement interpreters ~~~
 
