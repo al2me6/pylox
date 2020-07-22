@@ -115,6 +115,7 @@ class Tester:
         "bool",
         "comments",
         "for",
+        "function",
         "if",
         "logical_operator",
         "nil",
