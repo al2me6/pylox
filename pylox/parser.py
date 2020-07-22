@@ -282,11 +282,11 @@ class Parser:
 
         if switch is None:
             if default_action is not None:
-                block.statements.append(default_action)
+                block.body.append(default_action)
         else:
             assert inner_ref is not None
             inner_ref.else_branch = default_action
-            block.statements.append(switch)
+            block.body.append(switch)
         return block
 
     def _return_statement_parselet(self) -> ReturnStmt:

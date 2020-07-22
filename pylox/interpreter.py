@@ -89,7 +89,7 @@ class Interpreter(Visitor):
 
     def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
         with self.sub_environment():
-            for inner_stmt in stmt.statements:
+            for inner_stmt in stmt.body:
                 self._execute(inner_stmt)
 
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:

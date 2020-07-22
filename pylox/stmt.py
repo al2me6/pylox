@@ -38,7 +38,7 @@ class FunctionStmt(Stmt):
 
     def __str__(self) -> str:
         params_text = ", ".join(param.lexeme for param in self.params)
-        body_text = "".join(indent(str(stmt)) for stmt in self.body.statements)
+        body_text = "".join(indent(str(stmt)) for stmt in self.body.body)
         return f"<function: {self.name.lexeme}, [{params_text}],\n{body_text}>"
 
 
