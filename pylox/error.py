@@ -148,7 +148,7 @@ class LoxErrorHandler:
 
 
 class catch_internal_error:  # pylint: disable=invalid-name
-    def __init__(self, *, dump_backtrace: bool, ignore_types: Tuple[Type[BaseException]]) -> None:
+    def __init__(self, *, dump_backtrace: bool, ignore_types: Tuple[Type[BaseException], ...]) -> None:
         self._dump_backtrace = dump_backtrace
         self._ignore_types = ignore_types
 
@@ -157,6 +157,8 @@ class catch_internal_error:  # pylint: disable=invalid-name
 
     def __exit__(self, error_type: Type[BaseException], error: BaseException, tb) -> bool:  # type: ignore
         if error is not None:
+            if isinstance(error, (KeyboardInterrupt,)):
+                sys.exit(1)
             if isinstance(error, self._ignore_types):
                 raise error
             if self._dump_backtrace:
