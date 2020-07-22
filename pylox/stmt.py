@@ -34,12 +34,12 @@ class ExpressionStmt(Stmt):
 class FunctionStmt(Stmt):
     name: Token
     params: List[Token]
-    body: List[Stmt]
+    body: BlockStmt
 
     def __str__(self) -> str:
-        params_text = ", ".join(map(str, self.params))
-        body_text = "".join(indent(str(stmt)) for stmt in self.body)
-        return f"<function: {self.name.lexeme}, [{params_text}]\n{body_text}>"
+        params_text = ", ".join(param.lexeme for param in self.params)
+        body_text = "".join(indent(str(stmt)) for stmt in self.body.statements)
+        return f"<function: {self.name.lexeme}, [{params_text}],\n{body_text}>"
 
 
 @dataclass
@@ -56,6 +56,12 @@ class IfStmt(Stmt):
 @dataclass
 class PrintStmt(Stmt):
     expression: Expr
+
+
+@dataclass
+class ReturnStmt(Stmt):
+    keyword: Token
+    expression: Optional[Expr]
 
 
 @dataclass

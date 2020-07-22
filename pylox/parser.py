@@ -159,7 +159,7 @@ class Parser:
             terminator_expect_message="after parameters"
         ))
         self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
-        body = self._block_statement_parselet().body
+        body = self._block_statement_parselet()
         return FunctionStmt(name, params, body)
 
     def _variable_declaration_parselet(self) -> VarStmt:
@@ -174,13 +174,15 @@ class Parser:
             stmt = self._for_statement_parselet()
         elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
-        elif self._tv.advance_if_match(Tk.SWITCH):
-            stmt = self._switch_statement_parselet()
         elif self._tv.advance_if_match(Tk.LEFT_BRACE):
             stmt = self._block_statement_parselet()
+        elif self._tv.advance_if_match(Tk.SWITCH):
+            stmt = self._switch_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
             stmt = PrintStmt(self._expression())
             self._expect_punct(Tk.SEMICOLON, "after expression")
+        elif self._tv.advance_if_match(Tk.RETURN):
+            stmt = self._return_statement_parselet()
         elif self._tv.advance_if_match(Tk.WHILE):
             stmt = self._while_statement_parselet()
         else:
@@ -286,6 +288,12 @@ class Parser:
             inner_ref.else_branch = default_action
             block.statements.append(switch)
         return block
+
+    def _return_statement_parselet(self) -> ReturnStmt:
+        keyword = self._tv.peek_unwrap(-1)
+        expr = self._expression() if self._tv.peek() != Tk.SEMICOLON else None
+        self._expect_punct(Tk.SEMICOLON, "after return value")
+        return ReturnStmt(keyword, expr)
 
     def _while_statement_parselet(self) -> WhileStmt:
         self._expect_punct(Tk.LEFT_PAREN, "after 'while'")

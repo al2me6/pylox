@@ -2,10 +2,11 @@ from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
     from pylox.expr import VariableExpr
+    from pylox.lox_callable import LoxCallable
 
 LoxLiteral = Union[str, float]
 LoxPrimitive = Union[float, str, bool, None]
-LoxObject = Union[LoxPrimitive, "VariableExpr"]
+LoxObject = Union[LoxPrimitive, "VariableExpr", "LoxCallable"]
 
 
 def lox_is_valid_identifier_start(char: Optional[str]) -> bool:

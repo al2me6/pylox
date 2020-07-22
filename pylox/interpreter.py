@@ -1,10 +1,12 @@
 from contextlib import contextmanager
+from functools import lru_cache
 from operator import add, ge, gt, le, lt, mul, sub
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Sequence, Union
 
 from pylox.environment import Environment
 from pylox.error import LoxErrorHandler, LoxRuntimeError
 from pylox.expr import *
+from pylox.lox_callable import LoxCallable, LoxFunction, LoxReturn
 from pylox.lox_types import LoxObject, LoxPrimitive, lox_division, lox_equality, lox_object_to_str, lox_truth
 from pylox.stmt import *
 from pylox.token import Tk, Token
@@ -41,6 +43,14 @@ class Interpreter(Visitor):
     def _evaluate(self, expr: Expr) -> LoxObject:
         return expr.accept(self)  # type: ignore
 
+    @lru_cache(maxsize=256, typed=True)  # Deal with pathological recursion.
+    def _call(self, lox_callable: LoxCallable, arguments: Sequence[LoxObject]) -> LoxObject:
+        try:
+            lox_callable.accept(self, arguments)
+        except LoxReturn as value:
+            return value.value
+        return None
+
     def _expect_number_operand(self, operator: Token, *operand: LoxObject) -> None:
         """Enforce that the `operand`s passed are numbers. Otherwise,
         emit an error at the given `operator` token."""
@@ -66,6 +76,15 @@ class Interpreter(Visitor):
         finally:
             self._environment = outer
 
+    # ~~~ Callable interpreter ~~~
+
+    def _visit_LoxCallable__(self, func: LoxCallable, arguments: Sequence[LoxObject]) -> None:
+        assert func.arity == len(arguments)
+        with self.sub_environment(clean=True):
+            for param, arg in zip(func.params, arguments):
+                self._environment.define(param.lexeme, arg)
+            self._execute(func.body)
+
     # ~~~ Statement interpreters ~~~
 
     def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
@@ -75,6 +94,9 @@ class Interpreter(Visitor):
 
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
         self._evaluate(stmt.expression)
+
+    def _visit_FunctionStmt__(self, stmt: FunctionStmt) -> None:
+        self._environment.define(stmt.name.lexeme, LoxFunction(stmt))
 
     def _visit_IfStmt__(self, stmt: IfStmt) -> None:
         if lox_truth(self._evaluate(stmt.condition)):
@@ -90,6 +112,11 @@ class Interpreter(Visitor):
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
         self._environment.define(stmt.name.lexeme, value)
+
+    def _visit_ReturnStmt__(self, stmt: ReturnStmt) -> None:
+        if stmt.expression:
+            raise LoxReturn(self._evaluate(stmt.expression))
+        raise LoxReturn(None)
 
     def _visit_WhileStmt__(self, stmt: WhileStmt) -> None:
         while lox_truth(self._evaluate(stmt.condition)):
@@ -135,6 +162,15 @@ class Interpreter(Visitor):
             return ops[op](left, right)
 
         raise NOT_REACHED
+
+    def _visit_CallExpr__(self, expr: CallExpr) -> LoxObject:
+        callee = self._evaluate(expr.callee)
+        arguments = tuple(map(self._evaluate, expr.arguments))
+        if not isinstance(callee, LoxCallable):
+            raise LoxRuntimeError.at_token(expr.paren, "Can only call functions and classes.")
+        if (found := len(arguments)) != (expected := callee.arity):
+            raise LoxRuntimeError.at_token(expr.paren, f"Expected {expected} arguments but got {found}.")
+        return self._call(callee, arguments)
 
     def _visit_GroupingExpr__(self, expr: GroupingExpr) -> LoxObject:
         """Evaluate a group by evaluating the expression contained within."""

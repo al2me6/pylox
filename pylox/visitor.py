@@ -7,8 +7,8 @@ from typing import Any
 class Visitable(ABC):
     """Base class that accepts visitors in the visitor pattern."""
 
-    def accept(self, visitor: Visitor) -> Any:
-        return visitor.visit(self)
+    def accept(self, visitor: Visitor, *args: Any, **kwargs: Any) -> Any:
+        return visitor.visit(self, *args, **kwargs)
 
 
 class Visitor(ABC):
@@ -18,9 +18,9 @@ class Visitor(ABC):
     `def _visit_<Class>__(self, visitable)`
     """
 
-    def visit(self, visitable: Visitable) -> Any:
+    def visit(self, visitable: Visitable, *args: Any, **kwargs: Any) -> Any:
         """Attempt to find and call the correct visitor function."""
-        visitable_name = type(visitable).__name__
-        if impl := getattr(type(self), f"_visit_{visitable_name}__", None):
-            return impl(self, visitable)
-        raise NotImplementedError(f"{type(self).__name__} does not implement visit() for {visitable_name}")
+        for class_ in (type(visitable), *type(visitable).mro()):
+            if impl := getattr(type(self), f"_visit_{class_.__name__}__", None):
+                return impl(self, visitable, *args, **kwargs)
+        raise NotImplementedError(f"{type(self).__name__} does not implement visit() for {type(visitable).__name__}")
