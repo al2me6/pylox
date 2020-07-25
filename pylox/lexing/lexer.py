@@ -2,10 +2,10 @@ from typing import List, Optional, Tuple, Union
 
 from pylox.utilities.error import LoxErrorHandler, LoxSyntaxError
 from pylox.language.lox_types import LoxLiteral, lox_is_valid_identifier_name, lox_is_valid_identifier_start
-from pylox.utilities.streamview import StreamView
 from pylox.lexing.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, Tk, Token
-from pylox.utilities.helpers import is_arabic_numeral, dump_internal
+from pylox.utilities import dump_internal, is_arabic_numeral
 from pylox.utilities.configuration import Debug
+from pylox.utilities.stream_view import StreamView
 
 
 class Lexer:

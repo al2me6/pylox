@@ -8,9 +8,9 @@ from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
 from pylox.language.lox_types import LoxIdentifier
 from pylox.language.scoping import ScopeManager
+from pylox.utilities import dump_internal
 from pylox.utilities.error import LoxErrorHandler, LoxSyntaxError
-from pylox.utilities.helpers import dump_internal
-from pylox.utilities.streamview import StreamView
+from pylox.utilities.stream_view import StreamView
 
 RIGHT_ASSOCIATIVE_OPERATORS = {
     Tk.STAR_STAR,

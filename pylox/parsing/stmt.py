@@ -5,7 +5,7 @@ from typing import List, Optional
 from pylox.lexing.token import Token
 from pylox.language.lox_types import LoxIdentifier
 from pylox.parsing.expr import Expr
-from pylox.utilities.helpers import ast_node_pretty_printer, indent
+from pylox.utilities import ast_node_pretty_printer, indent
 from pylox.utilities.visitor import Visitable
 
 

@@ -9,8 +9,8 @@ from pylox.lexing.token import Token, Tk
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
 from pylox.runtime.environment import Environment
+from pylox.utilities import are_of_expected_type
 from pylox.utilities.error import LoxErrorHandler, LoxRuntimeError, NOT_REACHED
-from pylox.utilities.helpers import are_of_expected_type
 from pylox.utilities.visitor import Visitor
 
 
