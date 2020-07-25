@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, NewType, Optional, Union
 
 if TYPE_CHECKING:
     from pylox.expr import VariableExpr
@@ -7,6 +7,8 @@ if TYPE_CHECKING:
 LoxLiteral = Union[str, float]
 LoxPrimitive = Union[float, str, bool, None]
 LoxObject = Union[LoxPrimitive, "VariableExpr", "LoxCallable"]
+
+LoxIdentifier = NewType("LoxIdentifier", int)
 
 
 def lox_is_valid_identifier_start(char: Optional[str]) -> bool:

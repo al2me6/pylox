@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from pylox.expr import Expr
+from pylox.lox_types import LoxIdentifier
 from pylox.token import Token
 from pylox.utilities import ast_node_pretty_printer, indent
 from pylox.visitor import Visitable
@@ -67,6 +68,7 @@ class ReturnStmt(Stmt):
 @dataclass
 class VarStmt(Stmt):
     name: Token
+    mangled: LoxIdentifier
     initializer: Optional[Expr]
 
 

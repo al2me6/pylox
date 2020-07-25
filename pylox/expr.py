@@ -1,8 +1,8 @@
 from abc import ABC
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
-from pylox.lox_types import LoxPrimitive, lox_object_to_repr
+from pylox.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
 from pylox.token import Token
 from pylox.utilities import ast_node_pretty_printer
 from pylox.visitor import Visitable
@@ -19,6 +19,7 @@ class Expr(Visitable, ABC):
 @dataclass
 class AssignmentExpr(Expr):
     name: Token
+    mangled: Optional[LoxIdentifier]
     value: Expr
 
 
@@ -79,3 +80,4 @@ class UnaryExpr(Expr):
 @dataclass
 class VariableExpr(Expr):
     name: Token
+    mangled: Optional[LoxIdentifier]
