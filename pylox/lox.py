@@ -1,10 +1,10 @@
 import sys
 
-from pylox.error import LoxErrorHandler, LoxExit, catch_internal_error
-from pylox.interpreter import Interpreter
-from pylox.parser import Parser
-from pylox.scanner import Scanner
-from pylox.utilities import Debug
+from pylox.utilities.error import LoxErrorHandler, LoxExit, catch_internal_error
+from pylox.runtime.interpreter import Interpreter
+from pylox.parsing.parser import Parser
+from pylox.lexing.lexer import Lexer
+from pylox.utilities.configuration import Debug
 
 
 class Lox:
@@ -34,11 +34,11 @@ class Lox:
             source = source.replace("\r\n", "\n")
             self.error_handler.set_source(source)
 
-            tokens = Scanner(
+            tokens = Lexer(
                 source,
                 self.error_handler,
                 debug_flags=self.debug_flags
-            ).scan_tokens()
+            ).lex_tokens()
 
             self.error_handler.checkpoint()
             if self.debug_flags & Debug.NO_PARSE:

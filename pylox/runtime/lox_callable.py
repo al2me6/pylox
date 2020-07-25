@@ -2,10 +2,10 @@ from abc import ABC
 from itertools import repeat
 from typing import List, Optional
 
-from pylox.lox_types import LoxObject
-from pylox.stmt import FunctionStmt, Stmt
-from pylox.token import Token
-from pylox.visitor import Visitable
+from pylox.language.lox_types import LoxObject
+from pylox.parsing.stmt import FunctionStmt, Stmt
+from pylox.lexing.token import Token
+from pylox.utilities.visitor import Visitable
 
 
 class LoxCallable(Visitable, ABC):

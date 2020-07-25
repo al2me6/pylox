@@ -18,9 +18,9 @@ from typing import Collection, List, Optional, Sequence, TypeVar
 
 from termcolor import colored
 
-from ..error import LoxExit
-from ..lox import Lox
-from ..utilities import Debug
+from pylox.lox import Lox
+from pylox.utilities.configuration import Debug
+from pylox.utilities.error import LoxExit
 
 
 def indent(*block: str) -> str:

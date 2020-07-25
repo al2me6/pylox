@@ -3,15 +3,15 @@ from functools import lru_cache
 from operator import add, ge, gt, le, lt, mul, sub
 from typing import Any, Callable, Dict, List, Sequence, Union
 
-from pylox.environment import Environment
-from pylox.error import LoxErrorHandler, LoxRuntimeError
-from pylox.expr import *
-from pylox.lox_callable import LoxCallable, LoxFunction, LoxReturn
-from pylox.lox_types import LoxObject, LoxPrimitive, lox_division, lox_equality, lox_object_to_str, lox_truth
-from pylox.stmt import *
-from pylox.token import Tk, Token
-from pylox.utilities import NOT_REACHED, are_of_expected_type
-from pylox.visitor import Visitor
+from pylox.runtime.lox_callable import LoxCallable, LoxFunction, LoxReturn
+from pylox.language.lox_types import LoxObject, LoxPrimitive, lox_division, lox_equality, lox_object_to_str, lox_truth
+from pylox.lexing.token import Token, Tk
+from pylox.parsing.expr import *
+from pylox.parsing.stmt import *
+from pylox.runtime.environment import Environment
+from pylox.utilities.error import LoxErrorHandler, LoxRuntimeError, NOT_REACHED
+from pylox.utilities.helpers import are_of_expected_type
+from pylox.utilities.visitor import Visitor
 
 
 class Interpreter(Visitor):

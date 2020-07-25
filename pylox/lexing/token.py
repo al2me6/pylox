@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Iterator, Optional
 
-from pylox.lox_types import LoxLiteral
+from pylox.language.lox_types import LoxLiteral
 
 
 class Tk(Enum):

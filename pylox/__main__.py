@@ -3,7 +3,7 @@ if __name__ == "__main__":
     from functools import reduce
 
     from pylox.lox import Lox
-    from pylox.utilities import Debug
+    from pylox.utilities.configuration import Debug
 
     parser = argparse.ArgumentParser(
         prog="pylox",

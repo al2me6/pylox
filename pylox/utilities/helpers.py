@@ -1,18 +1,6 @@
-import sys
-from enum import Flag, auto
 from typing import Any, Iterator, Optional, Set, Tuple, Type
 
-from pylox.token import Token
-
-
-class Debug(Flag):
-    DUMP_TOKENS = auto()
-    DUMP_AST = auto()
-    NO_PARSE = auto()
-    NO_INTERPRET = auto()
-    JAVA_STYLE_TOKENS = auto()
-    REDUCED_ERROR_REPORTING = auto()
-    BACKTRACE = auto()
+from pylox.lexing.token import Token
 
 
 def dump_internal(name: str, *content: Any) -> None:
@@ -20,13 +8,7 @@ def dump_internal(name: str, *content: Any) -> None:
     heading_length = 20
     print(f"{name} Dump".center(heading_length, "~"))
     print(*content, sep="\n")
-    print("~"*heading_length)
-
-
-def eprint(*args: Any, **kwargs: Any) -> None:
-    """`print()` to stderr."""
-    kwargs["file"] = sys.stderr
-    print(*args, **kwargs)
+    print("~" * heading_length)
 
 
 def ast_node_pretty_printer(obj: Any, base_name: str) -> Tuple[str, Iterator[str]]:
@@ -58,6 +40,3 @@ def indent(*block: str) -> str:
         for line in str(blk).splitlines():
             indented_str += f"\t{line}\n"
     return indented_str
-
-
-NOT_REACHED = AssertionError("Unreachable code reached")

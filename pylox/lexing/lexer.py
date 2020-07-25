@@ -1,13 +1,14 @@
 from typing import List, Optional, Tuple, Union
 
-from pylox.error import LoxErrorHandler, LoxSyntaxError
-from pylox.lox_types import LoxLiteral, lox_is_valid_identifier_name, lox_is_valid_identifier_start
-from pylox.streamview import StreamView
-from pylox.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, Tk, Token
-from pylox.utilities import Debug, is_arabic_numeral, dump_internal
+from pylox.utilities.error import LoxErrorHandler, LoxSyntaxError
+from pylox.language.lox_types import LoxLiteral, lox_is_valid_identifier_name, lox_is_valid_identifier_start
+from pylox.utilities.streamview import StreamView
+from pylox.lexing.token import COMPOUND_TOKENS, SINGLE_CHAR_TOKENS, Tk, Token
+from pylox.utilities.helpers import is_arabic_numeral, dump_internal
+from pylox.utilities.configuration import Debug
 
 
-class Scanner:
+class Lexer:
     def __init__(
             self,
             source: str,
@@ -29,12 +30,12 @@ class Scanner:
         self._error_handler = error_handler
         self._debug_flags = debug_flags
 
-    def scan_tokens(self) -> List[Token]:
+    def lex_tokens(self) -> List[Token]:
         """Scan all tokens in the source stream."""
         while self._sv.has_next():
             # At the beginning of a lexeme.
             self._sv.set_marker()
-            self._scan_token()
+            self._lex_token()
         self._add_token(Tk.EOF)
 
         if self._debug_flags & Debug.DUMP_TOKENS:
@@ -45,7 +46,7 @@ class Scanner:
 
         return self._tokens
 
-    def _scan_token(self) -> None:
+    def _lex_token(self) -> None:
         """Scan the source stream for the next token and add it to the list"""
         char = self._sv.advance()
         next_token: Union[Tk, Tuple[Tk, LoxLiteral], None] = None

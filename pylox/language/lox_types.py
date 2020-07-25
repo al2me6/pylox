@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING, NewType, Optional, Union
+from typing import NewType, Optional, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from pylox.expr import VariableExpr
-    from pylox.lox_callable import LoxCallable
+    from pylox.parsing.expr import VariableExpr
+    from pylox.runtime.lox_callable import LoxCallable
 
 LoxLiteral = Union[str, float]
 LoxPrimitive = Union[float, str, bool, None]

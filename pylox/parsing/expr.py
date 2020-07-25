@@ -2,10 +2,10 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import List, Optional
 
-from pylox.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
-from pylox.token import Token
-from pylox.utilities import ast_node_pretty_printer
-from pylox.visitor import Visitable
+from pylox.language.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
+from pylox.lexing.token import Token
+from pylox.utilities.helpers import ast_node_pretty_printer
+from pylox.utilities.visitor import Visitable
 
 
 class Expr(Visitable, ABC):

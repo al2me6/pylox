@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-from pylox.error import LoxRuntimeError
-from pylox.lox_types import LoxObject
-from pylox.token import Token
+from pylox.utilities.error import LoxRuntimeError
+from pylox.language.lox_types import LoxObject
+from pylox.lexing.token import Token
 
 
 class Environment:

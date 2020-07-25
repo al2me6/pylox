@@ -2,11 +2,11 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import List, Optional
 
-from pylox.expr import Expr
-from pylox.lox_types import LoxIdentifier
-from pylox.token import Token
-from pylox.utilities import ast_node_pretty_printer, indent
-from pylox.visitor import Visitable
+from pylox.lexing.token import Token
+from pylox.language.lox_types import LoxIdentifier
+from pylox.parsing.expr import Expr
+from pylox.utilities.helpers import ast_node_pretty_printer, indent
+from pylox.utilities.visitor import Visitable
 
 
 class Stmt(Visitable, ABC):

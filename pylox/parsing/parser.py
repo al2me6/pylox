@@ -3,14 +3,14 @@ from __future__ import annotations
 from enum import IntEnum, auto
 from typing import Callable, Iterator, List, Optional, TypeVar, Union
 
-from pylox.error import LoxErrorHandler, LoxSyntaxError
-from pylox.expr import *
-from pylox.lox_types import LoxIdentifier
-from pylox.scoping import ScopeManager
-from pylox.stmt import *
-from pylox.streamview import StreamView
-from pylox.token import Tk, Token
-from pylox.utilities import dump_internal
+from pylox.lexing.token import Tk, Token
+from pylox.parsing.expr import *
+from pylox.parsing.stmt import *
+from pylox.language.lox_types import LoxIdentifier
+from pylox.language.scoping import ScopeManager
+from pylox.utilities.error import LoxErrorHandler, LoxSyntaxError
+from pylox.utilities.helpers import dump_internal
+from pylox.utilities.streamview import StreamView
 
 RIGHT_ASSOCIATIVE_OPERATORS = {
     Tk.STAR_STAR,

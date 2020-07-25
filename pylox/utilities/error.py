@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from abc import ABC
-from typing import Iterator, Tuple, Type
-
 import sys
+from abc import ABC
+from typing import Any, Iterator, Tuple, Type
 
-from pylox.token import Token
-from pylox.utilities import Debug, eprint
+from pylox.lexing.token import Token
+from pylox.utilities.configuration import Debug
+
+
+def eprint(*args: Any, **kwargs: Any) -> None:
+    """`print()` to stderr."""
+    kwargs["file"] = sys.stderr
+    print(*args, **kwargs)
 
 
 class LoxExit(SystemExit):
@@ -173,3 +178,6 @@ class catch_internal_error:  # pylint: disable=invalid-name
                 )
             sys.exit(1)
         return True
+
+
+NOT_REACHED = AssertionError("Unreachable code reached")

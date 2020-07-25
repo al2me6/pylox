@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TypeVar, Generic, List, Dict, Optional
+from typing import Dict, Generic, List, Optional, TypeVar
 
-from pylox.stmt import Stmt
+from pylox.parsing.stmt import Stmt
 
 K = TypeVar("K")
 V = TypeVar("V")
