@@ -28,15 +28,8 @@ def is_arabic_numeral(char: Optional[str]) -> bool:
 
 def are_of_expected_type(expected_types: Set[Type[Any]], *obj: Any) -> bool:
     """Check if the `obj`s passed are all of one of the expected types."""
-    for expected_type in expected_types:
-        if all(isinstance(o, expected_type) for o in obj):
-            return True
-    return False
+    return any(all(isinstance(o, exp_ty) for o in obj) for exp_ty in expected_types)
 
 
 def indent(*block: str) -> str:
-    indented_str = ""
-    for blk in block:
-        for line in str(blk).splitlines():
-            indented_str += f"\t{line}\n"
-    return indented_str
+    return "".join(f"\t{line}\n" for blk in block for line in str(blk).splitlines())
