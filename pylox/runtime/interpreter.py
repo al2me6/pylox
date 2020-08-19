@@ -43,7 +43,6 @@ class Interpreter(Visitor):
     def _evaluate(self, expr: Expr) -> LoxObject:
         return expr.accept(self)  # type: ignore
 
-    @lru_cache(maxsize=256, typed=True)  # Deal with pathological recursion.
     def _call(self, lox_callable: LoxCallable, arguments: Sequence[LoxObject]) -> LoxObject:
         try:
             lox_callable.accept(self, arguments)
