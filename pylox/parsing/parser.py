@@ -134,7 +134,7 @@ class Parser:
             if separator:
                 if not self._tv.advance_if_match(separator):
                     break
-        self._expect_next(terminator, f"Expected '{terminator.value}' {terminator_expect_message}.")
+        self._expect_next(terminator, f"Expect '{terminator.value}' {terminator_expect_message}.")
 
     def _define_ident(self, ident: Token) -> LoxIdentifier:
         mangled_ident = LoxIdentifier(id(ident) ^ id(self))  # TODO: find some better scheme?
