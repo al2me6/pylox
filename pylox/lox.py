@@ -1,10 +1,10 @@
 import sys
 
-from pylox.utilities.error import LoxErrorHandler, LoxExit, catch_internal_error
-from pylox.runtime.interpreter import Interpreter
-from pylox.parsing.parser import Parser
 from pylox.lexing.lexer import Lexer
+from pylox.parsing.parser import Parser
+from pylox.runtime.interpreter import Interpreter
 from pylox.utilities.configuration import Debug
+from pylox.utilities.error import LoxErrorHandler, LoxExit, catch_internal_error
 
 
 class Lox:
@@ -13,7 +13,7 @@ class Lox:
     def __init__(self, debug_flags: Debug = Debug(0)) -> None:
         self.debug_flags = debug_flags
         self.error_handler = LoxErrorHandler(self.debug_flags)
-        self.interpreter = Interpreter(self.error_handler)
+        self.interpreter = Interpreter(self.error_handler, dump=bool(self.debug_flags & Debug.DUMP_AST))
 
     def run_file(self, path: str) -> None:
         with open(path, 'r') as fil:
@@ -34,20 +34,12 @@ class Lox:
             source = source.replace("\r\n", "\n")
             self.error_handler.set_source(source)
 
-            tokens = Lexer(
-                source,
-                self.error_handler,
-                debug_flags=self.debug_flags
-            ).lex_tokens()
+            tokens = Lexer(source, self.error_handler, debug_flags=self.debug_flags).lex_tokens()
 
             self.error_handler.checkpoint()
             if self.debug_flags & Debug.NO_PARSE:
                 raise LoxExit(0)
-            statements = Parser(
-                tokens,
-                self.error_handler,
-                dump=bool(self.debug_flags & Debug.DUMP_AST)
-            ).parse()
+            statements = Parser(tokens, self.error_handler).parse()
 
             self.error_handler.checkpoint()
             if self.debug_flags & Debug.NO_INTERPRET:

@@ -2,9 +2,9 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import List, Optional
 
-from pylox.lexing.token import Token
 from pylox.language.lox_types import LoxIdentifier
-from pylox.parsing.expr import Expr
+from pylox.lexing.token import Token
+from pylox.parsing.expr import Expr, VariableExpr
 from pylox.utilities import ast_node_pretty_printer, indent
 from pylox.utilities.visitor import Visitable
 
@@ -17,13 +17,28 @@ class Stmt(Visitable, ABC):
         return f"<{name}: {', '.join(values)}>"
 
 
-@dataclass
-class BlockStmt(Stmt):
+class StmtGroup(Stmt):
+    """An un-scoped group of statements."""
     body: List[Stmt]
+
+    def __init__(self, *body: Stmt) -> None:
+        self.body = list(body)
 
     def __str__(self) -> str:
         inner_text = "".join(indent(str(stmt)) for stmt in self.body)
-        return f"<block:\n{inner_text}>"
+        return f"<{type(self).__name__.lower().replace('stmt', '')}:\n{inner_text}>"
+
+
+class BlockStmt(StmtGroup):
+    """A block statement that is evaluated in its own scope."""
+
+    def __init__(self, *body: Stmt) -> None:
+        # Flatten out multiple levels of blocks. A block immediately enclosing another
+        # is functionally equivalent to a single block.
+        if len(body) == 1 and issubclass(type(body[0]), StmtGroup):
+            self.body = body[0].body  # type: ignore
+        else:
+            super().__init__(*body)
 
 
 @dataclass
@@ -34,11 +49,12 @@ class ExpressionStmt(Stmt):
 @dataclass
 class FunctionStmt(Stmt):
     name: Token
-    params: List[Token]
-    body: BlockStmt
+    params: List[VariableExpr]
+    body: StmtGroup
+    uniq_id: Optional[LoxIdentifier] = None
 
     def __str__(self) -> str:
-        params_text = ", ".join(param.lexeme for param in self.params)
+        params_text = ", ".join(param.name.lexeme for param in self.params)
         body_text = "".join(indent(str(stmt)) for stmt in self.body.body)
         return f"<function: {self.name.lexeme}, [{params_text}],\n{body_text}>"
 
@@ -68,8 +84,8 @@ class ReturnStmt(Stmt):
 @dataclass
 class VarStmt(Stmt):
     name: Token
-    mangled: LoxIdentifier
     initializer: Optional[Expr]
+    uniq_id: Optional[LoxIdentifier] = None
 
 
 @dataclass

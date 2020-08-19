@@ -1,39 +1,43 @@
-from contextlib import contextmanager
+from contextlib import nullcontext
 from functools import lru_cache
 from operator import add, ge, gt, le, lt, mul, sub
 from typing import Any, Callable, Dict, List, Sequence, Union
 
-from pylox.runtime.lox_callable import LoxCallable, LoxFunction, LoxReturn
-from pylox.language.lox_types import LoxObject, LoxPrimitive, lox_division, lox_equality, lox_object_to_str, lox_truth
-from pylox.lexing.token import Token, Tk
+from pylox.language.lox_types import (LoxIdentifier, LoxObject, LoxPrimitive, lox_division, lox_equality,
+                                      lox_object_to_str, lox_truth)
+from pylox.lexing.token import Tk, Token
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
-from pylox.runtime.environment import Environment
-from pylox.utilities import are_of_expected_type
-from pylox.utilities.error import LoxErrorHandler, LoxRuntimeError, NOT_REACHED
+from pylox.runtime.lox_callable import LoxCallable, LoxFunction, LoxReturn
+from pylox.runtime.resolver import Resolver
+from pylox.runtime.stacked_map import StackedMap
+from pylox.utilities import are_of_expected_type, dump_internal
+from pylox.utilities.error import NOT_REACHED, LoxError, LoxErrorHandler, LoxRuntimeError
 from pylox.utilities.visitor import Visitor
 
 
 class Interpreter(Visitor):
     # pylint: disable=invalid-name
-    _global: Environment
-    _environment: Environment
+    _environment: StackedMap[LoxIdentifier, LoxObject]
 
-    def __init__(self, error_handler: LoxErrorHandler) -> None:
+    def __init__(self, error_handler: LoxErrorHandler, *, dump: bool = False) -> None:
         self._error_handler = error_handler
+        self._resolver = Resolver()
         self.reinitialize_environment()
+        self._dump = dump
 
-    def interpret(self, stmts: List[Stmt]) -> None:
+    def interpret(self, ast: List[Stmt]) -> None:
         try:
-            for stmt in stmts:
+            self._resolver.resolve(ast)
+            if self._dump:
+                dump_internal("AST", *ast)
+            for stmt in ast:
                 self._execute(stmt)
-        except LoxRuntimeError as error:
+        except LoxError as error:
             self._error_handler.err(error)
 
     def reinitialize_environment(self) -> None:
-        # TODO: add proper globals & namespacing, native functions
-        self._global = Environment()
-        self._environment = self._global
+        self._environment = StackedMap()
 
     # ~~~ Helper functions ~~~
 
@@ -66,28 +70,20 @@ class Interpreter(Visitor):
         if not are_of_expected_type({float, str}, *operand):
             raise LoxRuntimeError.at_token(operator, "Operands must be two numbers or two strings.", fatal=True)
 
-    @contextmanager
-    def sub_environment(self, *, clean: bool = False):  # type: ignore  # How to type this?
-        outer = self._environment
-        self._environment = Environment(self._global if clean else outer)
-        try:
-            yield
-        finally:
-            self._environment = outer
-
     # ~~~ Callable interpreter ~~~
 
     def _visit_LoxCallable__(self, func: LoxCallable, arguments: Sequence[LoxObject]) -> None:
         assert func.arity == len(arguments)
-        with self.sub_environment(clean=True):
+        with self._environment.graft(func.environment), self._environment.scope():
             for param, arg in zip(func.params, arguments):
-                self._environment.define(param.lexeme, arg)
+                assert param.target_id is not None
+                self._environment.define(param.target_id, arg)
             self._execute(func.body)
 
     # ~~~ Statement interpreters ~~~
 
-    def _visit_BlockStmt__(self, stmt: BlockStmt) -> None:
-        with self.sub_environment():
+    def _visit_StmtGroup__(self, stmt: StmtGroup) -> None:
+        with self._environment.scope() if isinstance(stmt, BlockStmt) else nullcontext():
             for inner_stmt in stmt.body:
                 self._execute(inner_stmt)
 
@@ -95,7 +91,8 @@ class Interpreter(Visitor):
         self._evaluate(stmt.expression)
 
     def _visit_FunctionStmt__(self, stmt: FunctionStmt) -> None:
-        self._environment.define(stmt.name.lexeme, LoxFunction(stmt))
+        assert stmt.uniq_id is not None
+        self._environment.define(stmt.uniq_id, LoxFunction(stmt, self._environment.tail()))
 
     def _visit_IfStmt__(self, stmt: IfStmt) -> None:
         if lox_truth(self._evaluate(stmt.condition)):
@@ -107,10 +104,11 @@ class Interpreter(Visitor):
         print(lox_object_to_str(self._evaluate(stmt.expression)))
 
     def _visit_VarStmt__(self, stmt: VarStmt) -> None:
+        assert stmt.uniq_id is not None
         value: LoxObject = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
-        self._environment.define(stmt.name.lexeme, value)
+        self._environment.define(stmt.uniq_id, value)
 
     def _visit_ReturnStmt__(self, stmt: ReturnStmt) -> None:
         if stmt.expression:
@@ -124,8 +122,10 @@ class Interpreter(Visitor):
     # ~~~ Expression interpreters ~~~
 
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> LoxObject:
+        if expr.target_id is None:
+            raise LoxRuntimeError.at_token(expr.name, f"Undefined variable '{expr.name.lexeme}'.", fatal=True)
         value = self._evaluate(expr.value)
-        self._environment.assign(expr.name, value)
+        self._environment.assign(expr.target_id, value)
         return value
 
     def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Union[bool, float, str]:
@@ -211,4 +211,6 @@ class Interpreter(Visitor):
         raise NOT_REACHED
 
     def _visit_VariableExpr__(self, expr: VariableExpr) -> LoxObject:
-        return self._environment.get(expr.name)
+        if expr.target_id is None:
+            raise LoxRuntimeError.at_token(expr.name, f"Undefined variable '{expr.name.lexeme}'.", fatal=True)
+        return self._environment.get(expr.target_id)

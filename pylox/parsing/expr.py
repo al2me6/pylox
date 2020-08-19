@@ -19,8 +19,8 @@ class Expr(Visitable, ABC):
 @dataclass
 class AssignmentExpr(Expr):
     name: Token
-    mangled: Optional[LoxIdentifier]
     value: Expr
+    target_id: Optional[LoxIdentifier] = None
 
 
 @dataclass
@@ -80,4 +80,4 @@ class UnaryExpr(Expr):
 @dataclass
 class VariableExpr(Expr):
     name: Token
-    mangled: Optional[LoxIdentifier]
+    target_id: Optional[LoxIdentifier] = None

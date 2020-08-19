@@ -6,9 +6,6 @@ from typing import Callable, Iterator, List, Optional, TypeVar, Union
 from pylox.lexing.token import Tk, Token
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
-from pylox.language.lox_types import LoxIdentifier
-from pylox.language.scoping import ScopeManager
-from pylox.utilities import dump_internal
 from pylox.utilities.error import LoxErrorHandler, LoxSyntaxError
 from pylox.utilities.stream_view import StreamView
 
@@ -68,25 +65,15 @@ class Parser:
     https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html.
     """
 
-    def __init__(
-            self,
-            tokens: List[Token],
-            error_handler: LoxErrorHandler,
-            *,
-            dump: bool = False
-    ) -> None:
+    def __init__(self, tokens: List[Token], error_handler: LoxErrorHandler) -> None:
         self._tv = StreamView(tokens)
         self._error_handler = error_handler
-        self._dump = dump
         self._statements: List[Stmt] = list()
-        self._scopes: ScopeManager[str, LoxIdentifier] = ScopeManager()
 
     def parse(self) -> List[Stmt]:
         while self._has_next():
             if declaration := self._declaration():
                 self._statements.append(declaration)
-        if self._dump and not self._error_handler.error_state:
-            dump_internal("AST", *self._statements)
         return self._statements
 
     # ~~~ Helper functions ~~~
@@ -136,14 +123,13 @@ class Parser:
                     break
         self._expect_next(terminator, f"Expect '{terminator.value}' {terminator_expect_message}.")
 
-    def _define_ident(self, ident: Token) -> LoxIdentifier:
-        mangled_ident = LoxIdentifier(id(ident) ^ id(self))  # TODO: find some better scheme?
-        self._scopes.define(ident.lexeme, mangled_ident)
-        return mangled_ident
-
-    def _resolve_ident(self, ident: Token) -> Optional[LoxIdentifier]:
-        assert ident.token_type is Tk.IDENTIFIER
-        return self._scopes.resolve(ident.lexeme)
+    def _parse_statements_in_block(self) -> Iterator[Stmt]:
+        return self._parse_repeatedly(
+            self._declaration,
+            separator=None,
+            terminator=Tk.RIGHT_BRACE,
+            terminator_expect_message="after block"
+        )
 
     # ~~~ Parsers ~~~
 
@@ -165,32 +151,29 @@ class Parser:
 
     def _callable_object_parselet(self, *, kind: str) -> FunctionStmt:
         name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
-        self._define_ident(name)
         self._expect_punct(Tk.LEFT_PAREN, f"after {kind} name")
-        with self._scopes.scope():
-            params = list(self._parse_repeatedly(
-                lambda: self._expect_next(Tk.IDENTIFIER, "Expect parameter name."),
-                terminator_expect_message="after parameters"
-            ))
-            self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
-            body = self._block_statement_parselet()
+        params = list(self._parse_repeatedly(
+            lambda: VariableExpr(self._expect_next(Tk.IDENTIFIER, "Expect parameter name.")),
+            terminator_expect_message="after parameters"
+        ))
+        self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
+        body = StmtGroup(*self._parse_statements_in_block())
         return FunctionStmt(name, params, body)
 
     def _variable_declaration_parselet(self) -> VarStmt:
         name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
-        mangled_ident = self._define_ident(name)
         expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
         self._expect_punct(Tk.SEMICOLON, "after expression")
-        return VarStmt(name, mangled_ident, expr)
+        return VarStmt(name, expr)
 
-    def _statement(self, *, unscoped_block: bool = False) -> Stmt:
+    def _statement(self) -> Stmt:
         stmt: Stmt
         if self._tv.advance_if_match(Tk.FOR):
             stmt = self._for_statement_parselet()
         elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
         elif self._tv.advance_if_match(Tk.LEFT_BRACE):
-            stmt = self._block_statement_parselet(unscoped=unscoped_block)
+            stmt = BlockStmt(*self._parse_statements_in_block())
         elif self._tv.advance_if_match(Tk.SWITCH):
             stmt = self._switch_statement_parselet()
         elif self._tv.advance_if_match(Tk.PRINT):
@@ -204,16 +187,6 @@ class Parser:
             stmt = self._expression_statement_parselet()
         return stmt
 
-    def _block_statement_parselet(self, *, unscoped: bool = False) -> BlockStmt:
-        with self._scopes.scope(dummy=unscoped):
-            stmts = self._parse_repeatedly(
-                self._declaration,
-                separator=None,
-                terminator=Tk.RIGHT_BRACE,
-                terminator_expect_message="after block"
-            )
-        return BlockStmt(list(stmts))
-
     def _expression_statement_parselet(self) -> ExpressionStmt:
         stmt = ExpressionStmt(self._expression())
         self._expect_punct(Tk.SEMICOLON, "after expression")
@@ -222,29 +195,27 @@ class Parser:
     def _for_statement_parselet(self) -> Stmt:
         self._expect_punct(Tk.LEFT_PAREN, "after 'for'")
 
-        with self._scopes.scope():
-            initializer: Optional[Stmt]
-            if self._tv.advance_if_match(Tk.SEMICOLON):
-                initializer = None
-            elif self._tv.advance_if_match(Tk.VAR):
-                initializer = self._variable_declaration_parselet()
-            else:
-                initializer = self._expression_statement_parselet()
+        initializer: Optional[Stmt]
+        if self._tv.advance_if_match(Tk.SEMICOLON):
+            initializer = None
+        elif self._tv.advance_if_match(Tk.VAR):
+            initializer = self._variable_declaration_parselet()
+        else:
+            initializer = self._expression_statement_parselet()
 
-            condition = self._expression() if self._tv.peek() != Tk.SEMICOLON else LiteralExpr(True)
-            self._expect_punct(Tk.SEMICOLON, "after loop condition")
+        condition = self._expression() if self._tv.peek() != Tk.SEMICOLON else LiteralExpr(True)
+        self._expect_punct(Tk.SEMICOLON, "after loop condition")
 
-            increment = self._expression() if self._tv.peek() != Tk.RIGHT_PAREN else None
-            self._expect_punct(Tk.RIGHT_PAREN, "after for clauses")
+        increment = self._expression() if self._tv.peek() != Tk.RIGHT_PAREN else None
+        self._expect_punct(Tk.RIGHT_PAREN, "after for clauses")
 
-            with self._scopes.scope():
-                body = self._statement(unscoped_block=True)  # Already explicitly scoped - don't double-scope.
+        body = self._statement()
 
         if increment:
-            body = BlockStmt([body, ExpressionStmt(increment)])
-        body = WhileStmt(condition, body)
+            body = StmtGroup(body, ExpressionStmt(increment))
+        body = WhileStmt(condition, BlockStmt(body))
         if initializer:
-            body = BlockStmt([initializer, body])
+            body = BlockStmt(initializer, body)
 
         return body
 
@@ -252,22 +223,19 @@ class Parser:
         self._expect_punct(Tk.LEFT_PAREN, "after 'if'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after if condition")
-        then_branch = self._statement()
-        else_branch = self._statement() if self._tv.advance_if_match(Tk.ELSE) else None
+        then_branch = BlockStmt(self._statement())
+        else_branch = BlockStmt(self._statement()) if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
 
-    def _switch_statement_parselet(self) -> BlockStmt:
+    def _switch_statement_parselet(self) -> StmtGroup:
         self._expect_punct(Tk.LEFT_PAREN, "after 'switch'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after switch condition")
 
         # Cache the value being switched against so that it is only executed once.
         cache_var = Token.create_arbitrary(Tk.IDENTIFIER, f"__lox_temp_{id(condition):x}")
-        cache_var_target = self._define_ident(cache_var)
-        block = BlockStmt([
-            VarStmt(cache_var, cache_var_target, condition)
-        ])
-        cached_condition = VariableExpr(cache_var, self._resolve_ident(cache_var))
+        block = BlockStmt(VarStmt(cache_var, condition))
+        cached_condition = VariableExpr(cache_var)
 
         self._expect_next(Tk.LEFT_BRACE, "Expect '{' before switch arms")
 
@@ -318,9 +286,7 @@ class Parser:
         self._expect_punct(Tk.LEFT_PAREN, "after 'while'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after while condition")
-        with self._scopes.scope():
-            body = self._statement()
-        return WhileStmt(condition, body)
+        return WhileStmt(condition, BlockStmt(self._statement()))
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
         """Pratt parser.
@@ -371,7 +337,7 @@ class Parser:
                 Tk.NIL: None
             }.get(token_type, token.literal))
         elif token_type is Tk.IDENTIFIER:
-            left = VariableExpr(token, self._resolve_ident(token))
+            left = VariableExpr(token)
         else:
             raise LoxSyntaxError.at_token(token, "Expect expression.")
 
@@ -419,7 +385,7 @@ class Parser:
 
     def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
         if isinstance(left, VariableExpr):
-            return AssignmentExpr(left.name, left.mangled, right)
+            return AssignmentExpr(left.name, right)
         raise LoxSyntaxError.at_token(op, "Invalid assignment target.")
 
 
