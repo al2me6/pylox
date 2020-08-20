@@ -79,20 +79,32 @@ class Parser:
     # ~~~ Helper functions ~~~
 
     def _has_next(self) -> bool:
+        """Wrapper around `StreamView.has_next()` that does not count `Tk.EOF`."""
         if self._tv.has_next():
             if self._tv.peek_unwrap().token_type is not Tk.EOF:
                 return True
         return False
 
     def _expect_next(self, expected: Tk, message: str) -> Token:
+        """Wrapper around `StreamView.advance_if_match()`; raise error with `message`
+        if the desired token is not found."""
         if self._tv.match(expected):
             return self._tv.advance()
         raise LoxSyntaxError.at_token(self._tv.peek_unwrap(), message)
 
     def _expect_punct(self, symbol: Tk, message: str) -> None:
+        """Expect a punctuation token with streamlined error reporting.
+
+        :param symbol: punctuation to expect (ex. Tk.COMMA)
+        :type symbol: Tk
+        :param message: where the punctuation should have been found (ex. "after statement")
+        :type message: str
+        """
         self._expect_next(symbol, f"Expect '{symbol.value}' {message}.")
 
     def _synchronize(self) -> None:
+        """Drop tokens until parsing can be safely resumed, so that the maximum number of errors
+        can be reported (as opposed to bailing on the first error encountered)."""
         if not self._tv.has_next():
             return
         self._tv.advance()
@@ -113,6 +125,18 @@ class Parser:
             terminator: Tk = Tk.RIGHT_PAREN,
             terminator_expect_message: str = "after expression"
     ) -> Iterator[T]:
+        """Repeatedly parse items of a certain type until a marker token is reached.
+
+        :param parselet: parser for a single item (can return None; will be dropped)
+        :type parselet: Callable[[], Union[T, Optional[T]]]
+        :param separator: separator between each item, defaults to Tk.COMMA
+        :type separator: Optional[Tk], optional
+        :param terminator: end marker, defaults to Tk.RIGHT_PAREN
+        :type terminator: Tk, optional
+        :param terminator_expect_message: error message if the marker is not found, defaults to "after expression"
+        :type terminator_expect_message: str, optional
+        :rtype: Iterator[T]
+        """
         while self._has_next():
             if self._tv.peek_unwrap().token_type is terminator:
                 break
@@ -124,6 +148,7 @@ class Parser:
         self._expect_next(terminator, f"Expect '{terminator.value}' {terminator_expect_message}.")
 
     def _parse_statements_in_block(self) -> Iterator[Stmt]:
+        """*Lazily* parse productions of the form `STMT* "}" ;`, yielding each enclosed statement."""
         return self._parse_repeatedly(
             self._declaration,
             separator=None,
@@ -150,6 +175,31 @@ class Parser:
         return decl
 
     def _callable_object_parselet(self, *, kind: str) -> FunctionDeclarationStmt:
+        """Parse callable (function and method) declarations.
+
+        Note that the values of the function's parameters will be inserted
+        into the top of the function body when executed.
+
+        When ran, the function:
+
+        ```
+        fun foo(bar, baz) {
+            return bar * 2 + baz;
+        }
+        ```
+
+        is executed as:
+
+        ```
+        {
+            var bar = SOME_VALUE;
+            var baz = SOME_OTHER_VALUE;
+            return var * 2 + baz;
+        }
+
+        Production: `"fun" IDENT "(" IDENT? ( "," IDENT )* ")" "{" STMT* "}" ;`
+        ```
+        """
         name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
         self._expect_punct(Tk.LEFT_PAREN, f"after {kind} name")
         params = list(self._parse_repeatedly(
@@ -161,12 +211,17 @@ class Parser:
         return FunctionDeclarationStmt(name, params, body)
 
     def _variable_declaration_parselet(self) -> VariableDeclarationStmt:
+        """A variable declared without assignment is implicitly `nil`.
+
+        Production: `"var" ( "=" EXPR )? ";" ;`
+        """
         name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
         expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
         self._expect_punct(Tk.SEMICOLON, "after expression")
         return VariableDeclarationStmt(name, expr)
 
     def _statement(self) -> Stmt:
+        # When is Python 3.10 coming out again???
         stmt: Stmt
         if self._tv.advance_if_match(Tk.FOR):
             stmt = self._for_statement_parselet()
@@ -188,11 +243,39 @@ class Parser:
         return stmt
 
     def _expression_statement_parselet(self) -> ExpressionStmt:
+        """Production: `EXPR ";" ;`"""
         stmt = ExpressionStmt(self._expression())
         self._expect_punct(Tk.SEMICOLON, "after expression")
         return stmt
 
     def _for_statement_parselet(self) -> Stmt:
+        """Parse C-style for loops by desugaring them into while loops.
+
+        Note that the loop variable is reused! Beware when passing said
+        variable by reference for use later.
+
+        The statement:
+
+        ```
+        for(var i = 0; i <= 4; i = i + 1) {
+            // Loop body.
+        }
+        ```
+
+        desugars to:
+
+        ```
+        {
+            var i = 0;
+            while(i <= 4) {
+                // Loop body.
+                i = i + 1;
+            }
+        }
+
+        Production: `"for" "(" ( VAR_STMT | EXPR )? ";" EXPR? ";" EXPR? ")" STMT ;`
+        ```
+        """
         self._expect_punct(Tk.LEFT_PAREN, "after 'for'")
 
         initializer: Optional[Stmt]
@@ -220,6 +303,13 @@ class Parser:
         return body
 
     def _if_statement_parselet(self) -> IfStmt:
+        """Note that branches are scoped. That is, variables instantiated inside
+        the if statement do not get added to the parent scope. This is to ensure
+        that the variable would always be defined, no matter which branch of
+        the if statement is taken.
+
+        Production: `"if" "(" EXPR ")" STMT ( "else" STMT )? ;`
+        """
         self._expect_punct(Tk.LEFT_PAREN, "after 'if'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after if condition")
@@ -228,6 +318,7 @@ class Parser:
         return IfStmt(condition, then_branch, else_branch)
 
     def _switch_statement_parselet(self) -> GroupingDirective:
+        # TODO: reimplement switches without desugaring and allow matching multiple conditions to one action.
         self._expect_punct(Tk.LEFT_PAREN, "after 'switch'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after switch condition")
@@ -277,12 +368,17 @@ class Parser:
         return block
 
     def _return_statement_parselet(self) -> ReturnStmt:
+        """Production: `"return" EXPR? ";" ;`"""
         keyword = self._tv.peek_unwrap(-1)
         expr = self._expression() if self._tv.peek() != Tk.SEMICOLON else None
         self._expect_punct(Tk.SEMICOLON, "after return value")
         return ReturnStmt(keyword, expr)
 
     def _while_statement_parselet(self) -> WhileStmt:
+        """Note that the body of a while statement is always scoped.
+
+        Production: `"while" "(" EXPR ")" STMT ;`
+        """
         self._expect_punct(Tk.LEFT_PAREN, "after 'while'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after while condition")
