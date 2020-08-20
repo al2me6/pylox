@@ -1,26 +1,23 @@
 from __future__ import annotations  # Circular references in annotations.
 
 from abc import ABC
-from typing import Any
+from typing import Callable, Generic, Optional, TypeVar
+
+V = TypeVar("V")
+R = TypeVar("R")
 
 
-class Visitable(ABC):
-    """Base class that accepts visitors in the visitor pattern."""
-
-    def accept(self, visitor: Visitor, *args: Any, **kwargs: Any) -> Any:
-        return visitor.visit(self, *args, **kwargs)
-
-
-class Visitor(ABC):
+class Visitor(Generic[V, R], ABC):
     """Base class that acts as a visitor in the visitor pattern.
 
     Implementations of visit methods are structured as follows:
     `def _visit_<Class>__(self, visitable)`
     """
 
-    def visit(self, visitable: Visitable, *args: Any, **kwargs: Any) -> Any:
+    def visit(self, visitable: V) -> R:
         """Attempt to find and call the correct visitor function."""
         for class_ in (type(visitable), *type(visitable).mro()):
-            if impl := getattr(type(self), f"_visit_{class_.__name__}__", None):
-                return impl(self, visitable, *args, **kwargs)
+            impl: Optional[Callable[[Visitor[V, R], V], R]] = getattr(type(self), f"_visit_{class_.__name__}__", None)
+            if impl is not None:
+                return impl(self, visitable)
         raise NotImplementedError(f"{type(self).__name__} does not implement visit() for {type(visitable).__name__}")

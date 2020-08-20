@@ -1,5 +1,4 @@
 from contextlib import nullcontext
-from functools import lru_cache
 from operator import add, ge, gt, le, lt, mul, sub
 from typing import Any, Callable, Dict, List, Sequence, Union
 
@@ -16,7 +15,7 @@ from pylox.utilities.error import NOT_REACHED, LoxError, LoxErrorHandler, LoxRun
 from pylox.utilities.visitor import Visitor
 
 
-class Interpreter(Visitor):
+class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
     # pylint: disable=invalid-name
     _environment: StackedMap[LoxIdentifier, LoxObject]
 
@@ -42,17 +41,10 @@ class Interpreter(Visitor):
     # ~~~ Helper functions ~~~
 
     def _execute(self, stmt: Stmt) -> None:
-        stmt.accept(self)
+        self.visit(stmt)
 
     def _evaluate(self, expr: Expr) -> LoxObject:
-        return expr.accept(self)  # type: ignore
-
-    def _call(self, lox_callable: LoxCallable, arguments: Sequence[LoxObject]) -> LoxObject:
-        try:
-            lox_callable.accept(self, arguments)
-        except LoxReturn as value:
-            return value.value
-        return None
+        return self.visit(expr)
 
     def _expect_number_operand(self, operator: Token, *operand: LoxObject) -> None:
         """Enforce that the `operand`s passed are numbers. Otherwise,
@@ -72,17 +64,21 @@ class Interpreter(Visitor):
 
     # ~~~ Callable interpreter ~~~
 
-    def _visit_LoxCallable__(self, func: LoxCallable, arguments: Sequence[LoxObject]) -> None:
-        assert func.arity == len(arguments)
-        with self._environment.graft(func.environment), self._environment.scope():
-            for param, arg in zip(func.params, arguments):
-                assert param.target_id is not None
-                self._environment.define(param.target_id, arg)
-            self._execute(func.body)
+    def _call(self, callee: LoxCallable, arguments: Sequence[LoxObject]) -> LoxObject:
+        try:
+            assert callee.arity == len(arguments)
+            with self._environment.graft(callee.environment), self._environment.scope():
+                for param, arg in zip(callee.params, arguments):
+                    assert param.target_id is not None
+                    self._environment.define(param.target_id, arg)
+                self._execute(callee.body)
+        except LoxReturn as value:
+            return value.value
+        return None
 
     # ~~~ Statement interpreters ~~~
 
-    def _visit_StmtGroup__(self, stmt: StmtGroup) -> None:
+    def _visit_GroupingDirective__(self, stmt: GroupingDirective) -> None:
         with self._environment.scope() if isinstance(stmt, BlockStmt) else nullcontext():
             for inner_stmt in stmt.body:
                 self._execute(inner_stmt)
@@ -90,7 +86,7 @@ class Interpreter(Visitor):
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
         self._evaluate(stmt.expression)
 
-    def _visit_FunctionStmt__(self, stmt: FunctionStmt) -> None:
+    def _visit_FunctionDeclarationStmt__(self, stmt: FunctionDeclarationStmt) -> None:
         assert stmt.uniq_id is not None
         self._environment.define(stmt.uniq_id, LoxFunction(stmt, self._environment.tail()))
 
@@ -103,7 +99,7 @@ class Interpreter(Visitor):
     def _visit_PrintStmt__(self, stmt: PrintStmt) -> None:
         print(lox_object_to_str(self._evaluate(stmt.expression)))
 
-    def _visit_VarStmt__(self, stmt: VarStmt) -> None:
+    def _visit_VariableDeclarationStmt__(self, stmt: VariableDeclarationStmt) -> None:
         assert stmt.uniq_id is not None
         value: LoxObject = None
         if stmt.initializer is not None:

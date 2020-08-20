@@ -6,10 +6,9 @@ from pylox.language.lox_types import LoxIdentifier
 from pylox.lexing.token import Token
 from pylox.parsing.expr import Expr, VariableExpr
 from pylox.utilities import ast_node_pretty_printer, indent
-from pylox.utilities.visitor import Visitable
 
 
-class Stmt(Visitable, ABC):
+class Stmt(ABC):
     """Base class for Lox statements."""
 
     def __str__(self) -> str:
@@ -17,7 +16,7 @@ class Stmt(Visitable, ABC):
         return f"<{name}: {', '.join(values)}>"
 
 
-class StmtGroup(Stmt):
+class GroupingDirective(Stmt):
     """An un-scoped group of statements."""
     body: List[Stmt]
 
@@ -29,13 +28,13 @@ class StmtGroup(Stmt):
         return f"<{type(self).__name__.lower().replace('stmt', '')}:\n{inner_text}>"
 
 
-class BlockStmt(StmtGroup):
+class BlockStmt(GroupingDirective):
     """A block statement that is evaluated in its own scope."""
 
     def __init__(self, *body: Stmt) -> None:
         # Flatten out multiple levels of blocks. A block immediately enclosing another
         # is functionally equivalent to a single block.
-        if len(body) == 1 and issubclass(type(body[0]), StmtGroup):
+        if len(body) == 1 and issubclass(type(body[0]), GroupingDirective):
             self.body = body[0].body  # type: ignore
         else:
             super().__init__(*body)
@@ -47,10 +46,10 @@ class ExpressionStmt(Stmt):
 
 
 @dataclass
-class FunctionStmt(Stmt):
+class FunctionDeclarationStmt(Stmt):
     name: Token
     params: List[VariableExpr]
-    body: StmtGroup
+    body: GroupingDirective
     uniq_id: Optional[LoxIdentifier] = None
 
     def __str__(self) -> str:
@@ -82,7 +81,7 @@ class ReturnStmt(Stmt):
 
 
 @dataclass
-class VarStmt(Stmt):
+class VariableDeclarationStmt(Stmt):
     name: Token
     initializer: Optional[Expr]
     uniq_id: Optional[LoxIdentifier] = None

@@ -5,10 +5,9 @@ from typing import List, Optional
 from pylox.language.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
 from pylox.lexing.token import Token
 from pylox.utilities import ast_node_pretty_printer
-from pylox.utilities.visitor import Visitable
 
 
-class Expr(Visitable, ABC):
+class Expr(ABC):
     """Base class for expressions which have differing attributes."""
 
     def __str__(self) -> str:
@@ -34,6 +33,11 @@ class BinaryExpr(Expr):
 
 
 @dataclass
+class LogicalExpr(BinaryExpr):
+    pass
+
+
+@dataclass
 class CallExpr(Expr):
     callee: Expr
     paren: Token
@@ -54,11 +58,6 @@ class LiteralExpr(Expr):
 
     def __str__(self) -> str:
         return lox_object_to_repr(self.value)
-
-
-@dataclass
-class LogicalExpr(BinaryExpr):
-    pass
 
 
 @dataclass

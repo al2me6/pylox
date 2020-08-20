@@ -1,6 +1,6 @@
 from collections import abc
 from contextlib import contextmanager, nullcontext
-from typing import Any, Iterator, List, Optional, Set
+from typing import Iterator, List, Optional, Set, Union
 
 from pylox.language.lox_types import LoxIdentifier
 from pylox.lexing.token import Token
@@ -11,7 +11,7 @@ from pylox.utilities.error import LoxSyntaxError
 from pylox.utilities.visitor import Visitor
 
 
-class Resolver(Visitor):
+class Resolver(Visitor[Union[Expr, Stmt], None]):
     def __init__(self) -> None:
         self._resolved_vars: StackedMap[str, LoxIdentifier] = StackedMap()
         self._dirty: Set[str] = set()
@@ -21,14 +21,14 @@ class Resolver(Visitor):
         for stmt in ast:
             self.visit(stmt)
 
-    def visit(self, visitable: Any, *args: Any, **kwargs: Any) -> None:
+    def visit(self, visitable: Union[Expr, Stmt]) -> None:
         # Blanket impl.
         if isinstance(visitable, (Expr, Stmt)) and not isinstance(visitable, (
                 AssignmentExpr,
                 VariableExpr,
-                FunctionStmt,
-                StmtGroup,
-                VarStmt,
+                GroupingDirective,
+                FunctionDeclarationStmt,
+                VariableDeclarationStmt,
         )):
             for attr in vars(visitable).values():
                 for sub_attr in attr if isinstance(attr, abc.Iterable) else (attr, ):
@@ -69,21 +69,21 @@ class Resolver(Visitor):
     def _visit_VariableExpr__(self, expr: VariableExpr) -> None:
         expr.target_id = self._resolve_ident(expr.name)
 
-    def _visit_FunctionStmt__(self, stmt: FunctionStmt) -> None:
+    def _visit_GroupingDirective__(self, stmt: GroupingDirective) -> None:
+        # Only true block statements are scoped.
+        with self._resolved_vars.scope() if isinstance(stmt, BlockStmt) else nullcontext():
+            for s in stmt.body:
+                self.visit(s)
+
+    def _visit_FunctionDeclarationStmt__(self, stmt: FunctionDeclarationStmt) -> None:
         stmt.uniq_id = self._register_ident(stmt.name)
         with self._resolved_vars.scope():
             for param in stmt.params:
                 param.target_id = self._register_ident(param.name)
             self.visit(stmt.body)
 
-    def _visit_VarStmt__(self, stmt: VarStmt) -> None:
+    def _visit_VariableDeclarationStmt__(self, stmt: VariableDeclarationStmt) -> None:
         if stmt.initializer:
             with self._mark_as_dirty(stmt.name) if self._resolved_vars.is_local() else nullcontext():
                 self.visit(stmt.initializer)
         stmt.uniq_id = self._register_ident(stmt.name)
-
-    def _visit_StmtGroup__(self, stmt: StmtGroup) -> None:
-        # Only true block statements are scoped.
-        with self._resolved_vars.scope() if isinstance(stmt, BlockStmt) else nullcontext():
-            for s in stmt.body:
-                self.visit(s)

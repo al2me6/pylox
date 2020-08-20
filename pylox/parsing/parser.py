@@ -149,7 +149,7 @@ class Parser:
 
         return decl
 
-    def _callable_object_parselet(self, *, kind: str) -> FunctionStmt:
+    def _callable_object_parselet(self, *, kind: str) -> FunctionDeclarationStmt:
         name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
         self._expect_punct(Tk.LEFT_PAREN, f"after {kind} name")
         params = list(self._parse_repeatedly(
@@ -157,14 +157,14 @@ class Parser:
             terminator_expect_message="after parameters"
         ))
         self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
-        body = StmtGroup(*self._parse_statements_in_block())
-        return FunctionStmt(name, params, body)
+        body = GroupingDirective(*self._parse_statements_in_block())
+        return FunctionDeclarationStmt(name, params, body)
 
-    def _variable_declaration_parselet(self) -> VarStmt:
+    def _variable_declaration_parselet(self) -> VariableDeclarationStmt:
         name = self._expect_next(Tk.IDENTIFIER, "Expect variable name.")
         expr = self._expression() if self._tv.advance_if_match(Tk.EQUAL) else None
         self._expect_punct(Tk.SEMICOLON, "after expression")
-        return VarStmt(name, expr)
+        return VariableDeclarationStmt(name, expr)
 
     def _statement(self) -> Stmt:
         stmt: Stmt
@@ -212,7 +212,7 @@ class Parser:
         body = self._statement()
 
         if increment:
-            body = StmtGroup(body, ExpressionStmt(increment))
+            body = GroupingDirective(body, ExpressionStmt(increment))
         body = WhileStmt(condition, BlockStmt(body))
         if initializer:
             body = BlockStmt(initializer, body)
@@ -227,14 +227,14 @@ class Parser:
         else_branch = BlockStmt(self._statement()) if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
 
-    def _switch_statement_parselet(self) -> StmtGroup:
+    def _switch_statement_parselet(self) -> GroupingDirective:
         self._expect_punct(Tk.LEFT_PAREN, "after 'switch'")
         condition = self._expression()
         self._expect_punct(Tk.RIGHT_PAREN, "after switch condition")
 
         # Cache the value being switched against so that it is only executed once.
         cache_var = Token.create_arbitrary(Tk.IDENTIFIER, f"__lox_temp_{id(condition):x}")
-        block = BlockStmt(VarStmt(cache_var, condition))
+        block = BlockStmt(VariableDeclarationStmt(cache_var, condition))
         cached_condition = VariableExpr(cache_var)
 
         self._expect_next(Tk.LEFT_BRACE, "Expect '{' before switch arms")
