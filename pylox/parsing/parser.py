@@ -38,22 +38,22 @@ class Prec(IntEnum):
 
 
 OPERATOR_PRECEDENCE = {
-    Tk.LEFT_PAREN: Prec.CALL,
-    Tk.STAR_STAR: Prec.EXP,
-    Tk.STAR: Prec.FACTOR,
-    Tk.SLASH: Prec.FACTOR,
-    Tk.PLUS: Prec.TERM,
-    Tk.MINUS: Prec.TERM,
-    Tk.GREATER: Prec.COMPARISON,
-    Tk.GREATER_EQUAL: Prec.COMPARISON,
-    Tk.LESS: Prec.COMPARISON,
-    Tk.LESS_EQUAL: Prec.COMPARISON,
-    Tk.EQUAL_EQUAL: Prec.EQUALITY,
-    Tk.BANG_EQUAL: Prec.EQUALITY,
-    Tk.AND: Prec.AND,
-    Tk.OR: Prec.OR,
-    Tk.QUESTION: Prec.TERNARY,
     Tk.EQUAL: Prec.ASSIGNMENT,
+    Tk.QUESTION: Prec.TERNARY,
+    Tk.OR: Prec.OR,
+    Tk.AND: Prec.AND,
+    Tk.BANG_EQUAL: Prec.EQUALITY,
+    Tk.EQUAL_EQUAL: Prec.EQUALITY,
+    Tk.LESS_EQUAL: Prec.COMPARISON,
+    Tk.LESS: Prec.COMPARISON,
+    Tk.GREATER_EQUAL: Prec.COMPARISON,
+    Tk.GREATER: Prec.COMPARISON,
+    Tk.MINUS: Prec.TERM,
+    Tk.PLUS: Prec.TERM,
+    Tk.SLASH: Prec.FACTOR,
+    Tk.STAR: Prec.FACTOR,
+    Tk.STAR_STAR: Prec.EXP,
+    Tk.LEFT_PAREN: Prec.CALL,
 }
 
 

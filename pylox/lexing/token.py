@@ -8,32 +8,32 @@ from pylox.language.lox_types import LoxLiteral
 
 
 class Tk(Enum):
-    # single-char
-    LEFT_PAREN = "("
-    RIGHT_PAREN = ")"
+    # Single-char:
     LEFT_BRACE = "{"
     RIGHT_BRACE = "}"
+    COLON = ":"
     COMMA = ","
     DOT = "."
     MINUS = "-"
+    LEFT_PAREN = "("
+    RIGHT_PAREN = ")"
     PLUS = "+"
-    SEMICOLON = ";"
     QUESTION = "?"
-    COLON = ":"
-    # compoundable
-    STAR = "*"
+    SEMICOLON = ";"
+    # Compoundable:
     BANG = "!"
-    EQUAL = "="
-    GREATER = ">"
-    LESS = "<"
-    STAR_STAR = "**"
     BANG_EQUAL = "!="
+    EQUAL = "="
     EQUAL_EQUAL = "=="
     EQUAL_GREATER = "=>"
+    GREATER = ">"
     GREATER_EQUAL = ">="
+    LESS = "<"
     LESS_EQUAL = "<="
+    STAR = "*"
+    STAR_STAR = "**"
     SLASH = auto()
-    # keywords
+    # Keywords:
     AND = "@AND"
     CLASS = "@CLASS"
     ELSE = "@ELSE"
@@ -52,10 +52,10 @@ class Tk(Enum):
     VAR = "@VAR"
     WHILE = "@WHILE"
     # literals
-    IDENTIFIER = auto()
-    STRING = auto()
-    NUMBER = auto()
     EOF = auto()
+    IDENTIFIER = auto()
+    NUMBER = auto()
+    STRING = auto()
 
     @classmethod
     def iter_values(cls) -> Iterator[Any]:

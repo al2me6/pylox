@@ -1,5 +1,7 @@
 from contextlib import nullcontext
-from operator import add, ge, gt, le, lt, mul, sub
+from operator import add, ge, gt, le, lt, mul
+from operator import pow as op_pow
+from operator import sub
 from typing import Any, Callable, Dict, List, Sequence, Union
 
 from pylox.language.lox_callable import LoxCallable, LoxFunction, LoxReturn
@@ -134,17 +136,20 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
         right = self._evaluate(expr.right)
 
         ops: Dict[Tk, Callable[[Any, Any], Union[bool, float, str]]] = {
+            # Mathematical operations:
             Tk.PLUS: add,
             Tk.MINUS: sub,
             Tk.STAR: mul,
-            Tk.STAR_STAR: pow,
+            Tk.STAR_STAR: op_pow,
             Tk.SLASH: lox_division,
+            # Equality:
+            Tk.EQUAL_EQUAL: lox_equality,
+            Tk.BANG_EQUAL: lambda l, r: not lox_equality(l, r),
+            # Comparison:
             Tk.GREATER: gt,
             Tk.GREATER_EQUAL: ge,
             Tk.LESS: lt,
             Tk.LESS_EQUAL: le,
-            Tk.EQUAL_EQUAL: lox_equality,
-            Tk.BANG_EQUAL: lambda l, r: not lox_equality(l, r),
         }
         if (op := expr.operator.token_type) in ops:  # pylint: disable=superfluous-parens
             # Note that we do not do implicit casts. That Pandora's box is not to be opened...
