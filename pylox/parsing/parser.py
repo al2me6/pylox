@@ -68,13 +68,13 @@ class Parser:
     def __init__(self, tokens: List[Token], error_handler: LoxErrorHandler) -> None:
         self._tv = StreamView(tokens)
         self._error_handler = error_handler
-        self._statements: List[Stmt] = list()
+        self._ast: List[Stmt] = list()
 
     def parse(self) -> List[Stmt]:
         while self._has_next():
             if declaration := self._declaration():
-                self._statements.append(declaration)
-        return self._statements
+                self._ast.append(declaration)
+        return self._ast
 
     # ~~~ Helper functions ~~~
 
