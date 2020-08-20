@@ -2,16 +2,16 @@ from contextlib import nullcontext
 from operator import add, ge, gt, le, lt, mul, sub
 from typing import Any, Callable, Dict, List, Sequence, Union
 
+from pylox.language.lox_callable import LoxCallable, LoxFunction, LoxReturn
 from pylox.language.lox_types import (LoxIdentifier, LoxObject, LoxPrimitive, lox_division, lox_equality,
                                       lox_object_to_str, lox_truth)
 from pylox.lexing.token import Tk, Token
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
-from pylox.runtime.lox_callable import LoxCallable, LoxFunction, LoxReturn
 from pylox.runtime.resolver import Resolver
-from pylox.runtime.stacked_map import StackedMap
 from pylox.utilities import are_of_expected_type, dump_internal
 from pylox.utilities.error import NOT_REACHED, LoxError, LoxErrorHandler, LoxRuntimeError
+from pylox.utilities.stacked_map import StackedMap
 from pylox.utilities.visitor import Visitor
 
 

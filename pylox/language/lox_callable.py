@@ -5,7 +5,7 @@ from typing import Optional, Sequence
 from pylox.language.lox_types import LoxIdentifier, LoxObject
 from pylox.parsing.expr import VariableExpr
 from pylox.parsing.stmt import FunctionDeclarationStmt, Stmt
-from pylox.runtime.stacked_map import RawStack
+from pylox.utilities.stacked_map import RawStack
 
 
 class LoxCallable(ABC):

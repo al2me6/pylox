@@ -6,8 +6,8 @@ from pylox.language.lox_types import LoxIdentifier
 from pylox.lexing.token import Token
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
-from pylox.runtime.stacked_map import StackedMap
 from pylox.utilities.error import LoxSyntaxError
+from pylox.utilities.stacked_map import StackedMap
 from pylox.utilities.visitor import Visitor
 
 
