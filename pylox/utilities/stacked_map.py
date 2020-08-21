@@ -56,8 +56,6 @@ class StackedMap(Generic[K, V]):
 
     def get(self, key: K) -> V:
         for frame in reversed(self._stack):
-            try:
+            if key in frame:
                 return frame[key]
-            except KeyError:
-                pass
         raise KeyError
