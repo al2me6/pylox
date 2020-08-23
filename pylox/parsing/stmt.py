@@ -53,7 +53,7 @@ class FunctionDeclarationStmt(Stmt):
     uniq_id: Optional[LoxIdentifier] = None
 
     def __str__(self) -> str:
-        params_text = ", ".join(param.name.lexeme for param in self.params)
+        params_text = ", ".join(param.target.lexeme for param in self.params)
         body_text = "".join(indent(str(stmt)) for stmt in self.body.body)
         return f"<function: {self.name.lexeme}, [{params_text}],\n{body_text}>"
 
@@ -82,7 +82,7 @@ class ReturnStmt(Stmt):
 
 @dataclass
 class VariableDeclarationStmt(Stmt):
-    name: Token
+    ident: Token
     initializer: Optional[Expr]
     uniq_id: Optional[LoxIdentifier] = None
 

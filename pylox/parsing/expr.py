@@ -17,7 +17,7 @@ class Expr(ABC):
 
 @dataclass
 class AssignmentExpr(Expr):
-    name: Token
+    target: Token
     value: Expr
     target_id: Optional[LoxIdentifier] = None
 
@@ -78,5 +78,5 @@ class UnaryExpr(Expr):
 
 @dataclass
 class VariableExpr(Expr):
-    name: Token
+    target: Token
     target_id: Optional[LoxIdentifier] = None

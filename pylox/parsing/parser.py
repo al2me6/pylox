@@ -340,9 +340,9 @@ class Parser:
             self._expect_next(Tk.EQUAL_GREATER, "Expect '=>' after switch arm")
             arm_action = self._statement()
 
-            if isinstance(arm_condition, VariableExpr) and arm_condition.name.lexeme == "_":  # Found the default arm.
+            if isinstance(arm_condition, VariableExpr) and arm_condition.target.lexeme == "_":  # Found the default arm.
                 if default_action is not None:  # If we've already got one, there's a problem.
-                    raise LoxSyntaxError.at_token(arm_condition.name, "Cannot have more than one default case.")
+                    raise LoxSyntaxError.at_token(arm_condition.target, "Cannot have more than one default case.")
                 default_action = arm_action  # Otherwise, save it until the entire tree is built.
             else:
                 arm = IfStmt(
@@ -481,7 +481,7 @@ class Parser:
 
     def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
         if isinstance(left, VariableExpr):
-            return AssignmentExpr(left.name, right)
+            return AssignmentExpr(left.target, right)
         raise LoxSyntaxError.at_token(op, "Invalid assignment target.")
 
 

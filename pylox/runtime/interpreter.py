@@ -121,7 +121,7 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
 
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> LoxObject:
         if expr.target_id is None:
-            raise LoxRuntimeError.at_token(expr.name, f"Undefined variable '{expr.name.lexeme}'.", fatal=True)
+            raise LoxRuntimeError.at_token(expr.target, f"Undefined variable '{expr.target.lexeme}'.", fatal=True)
         value = self._evaluate(expr.value)
         self._environment.assign(expr.target_id, value)
         return value
@@ -213,5 +213,5 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
 
     def _visit_VariableExpr__(self, expr: VariableExpr) -> LoxObject:
         if expr.target_id is None:
-            raise LoxRuntimeError.at_token(expr.name, f"Undefined variable '{expr.name.lexeme}'.", fatal=True)
+            raise LoxRuntimeError.at_token(expr.target, f"Undefined variable '{expr.target.lexeme}'.", fatal=True)
         return self._environment.get(expr.target_id)

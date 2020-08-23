@@ -63,11 +63,11 @@ class Resolver(Visitor[Union[Expr, Stmt], None]):
             self._dirty.discard(ident.lexeme)
 
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> None:
-        expr.target_id = self._resolve_ident(expr.name)
+        expr.target_id = self._resolve_ident(expr.target)
         self.visit(expr.value)
 
     def _visit_VariableExpr__(self, expr: VariableExpr) -> None:
-        expr.target_id = self._resolve_ident(expr.name)
+        expr.target_id = self._resolve_ident(expr.target)
 
     def _visit_GroupingDirective__(self, stmt: GroupingDirective) -> None:
         # Only true block statements are scoped.
@@ -79,11 +79,11 @@ class Resolver(Visitor[Union[Expr, Stmt], None]):
         stmt.uniq_id = self._register_ident(stmt.name)
         with self._resolved_vars.scope():
             for param in stmt.params:
-                param.target_id = self._register_ident(param.name)
+                param.target_id = self._register_ident(param.target)
             self.visit(stmt.body)
 
     def _visit_VariableDeclarationStmt__(self, stmt: VariableDeclarationStmt) -> None:
         if stmt.initializer:
-            with self._mark_as_dirty(stmt.name) if self._resolved_vars.is_local() else nullcontext():
+            with self._mark_as_dirty(stmt.ident) if self._resolved_vars.is_local() else nullcontext():
                 self.visit(stmt.initializer)
-        stmt.uniq_id = self._register_ident(stmt.name)
+        stmt.uniq_id = self._register_ident(stmt.ident)
