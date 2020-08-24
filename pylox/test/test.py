@@ -113,6 +113,7 @@ class Tester:
         "assignment",
         "block",
         "bool",
+        "closure",
         "comments",
         "for",
         "function",

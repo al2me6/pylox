@@ -1,0 +1,29 @@
+fun execute_func(func) {
+    func();
+}
+
+fun evaluate_result(func) {
+    return func();
+}
+
+fun execute_func_with_arg(func) {
+    func("hello world");
+}
+
+fun return_a_func() {
+    var a = 3;
+    return fun() { return a; };
+}
+
+fun return_a_func_with_arg() {
+    return fun(arg) { print arg; };
+}
+
+var func1 = return_a_func();
+var func2 = return_a_func_with_arg();
+
+print(func2);  // expect: <function(arg)>
+
+print evaluate_result(func1);  // expect: 3
+execute_func(fun() {print "Hi there!"; });  // expect: Hi there!
+execute_func_with_arg(func2);  // expect: hello world
