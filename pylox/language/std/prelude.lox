@@ -1,0 +1,15 @@
+fun clock() {
+    return internals$clock();
+}
+
+fun exit(code) {
+    internals$exit(code);
+}
+
+fun print(obj) {
+    internals$print(obj);
+}
+
+fun println(obj) {
+    internals$println(obj);
+}

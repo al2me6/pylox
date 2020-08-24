@@ -122,9 +122,6 @@ The proposals below are WIP and can change at any point.
 * `print` and `println` *functions*
   * Contingent on module system.
   * Preserve backward-compatibility by desugaring `print` "keyword" into `println` call
-* Anonymous functions: `fun(arg1, arg2) { stmt1; stmt2; }`
-  * Args are taken by reference
-  * A regular function declaration is desugared into variable assignment: `var foo = fun() {}`
 * Sum types and product types
   * Overlap between product types and classes?
 * String interpolation: ``print `There are {var} objects`;``
