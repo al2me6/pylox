@@ -1,10 +1,13 @@
 from abc import ABC
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pylox.language.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
 from pylox.lexing.token import Token
-from pylox.utilities import ast_node_pretty_printer
+from pylox.utilities import ast_node_pretty_printer, indent
+
+if TYPE_CHECKING:
+    from pylox.parsing.stmt import GroupingDirective
 
 
 class Expr(ABC):
@@ -13,6 +16,16 @@ class Expr(ABC):
     def __str__(self) -> str:
         name, values = ast_node_pretty_printer(self, "Expr")
         return f"({name} {' '.join(values)})"
+
+
+@dataclass
+class AnonymousFunctionExpr(Expr):
+    params: List["VariableExpr"]
+    body: "GroupingDirective"
+
+    def __str__(self) -> str:
+        params_text = ", ".join(param.target.lexeme for param in self.params)
+        return f"(anonymousfunction [{params_text}],\n{indent(str(self.body))})"
 
 
 @dataclass
@@ -74,6 +87,14 @@ class UnaryExpr(Expr):
 
     def __str__(self) -> str:
         return f"({self.operator.lexeme} {self.right})"
+
+
+# class PathExpr(Expr):
+#     raise NotImplementedError
+
+
+# class AttributeAccessExpr(Expr):
+#     raise NotImplementedError
 
 
 @dataclass

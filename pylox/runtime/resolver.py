@@ -24,10 +24,10 @@ class Resolver(Visitor[Union[Expr, Stmt], None]):
     def visit(self, visitable: Union[Expr, Stmt]) -> None:
         # Blanket impl.
         if isinstance(visitable, (Expr, Stmt)) and not isinstance(visitable, (
+                AnonymousFunctionExpr,
                 AssignmentExpr,
                 VariableExpr,
                 GroupingDirective,
-                FunctionDeclarationStmt,
                 VariableDeclarationStmt,
         )):
             for attr in vars(visitable).values():
@@ -62,6 +62,12 @@ class Resolver(Visitor[Union[Expr, Stmt], None]):
         finally:
             self._dirty.discard(ident.lexeme)
 
+    def _visit_AnonymousFunctionExpr__(self, expr: AnonymousFunctionExpr) -> None:
+        with self._resolved_vars.scope():
+            for param in expr.params:
+                param.target_id = self._register_ident(param.target)
+            self.visit(expr.body)
+
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> None:
         expr.target_id = self._resolve_ident(expr.target)
         self.visit(expr.value)
@@ -75,15 +81,18 @@ class Resolver(Visitor[Union[Expr, Stmt], None]):
             for s in stmt.body:
                 self.visit(s)
 
-    def _visit_FunctionDeclarationStmt__(self, stmt: FunctionDeclarationStmt) -> None:
-        stmt.uniq_id = self._register_ident(stmt.name)
-        with self._resolved_vars.scope():
-            for param in stmt.params:
-                param.target_id = self._register_ident(param.target)
-            self.visit(stmt.body)
-
     def _visit_VariableDeclarationStmt__(self, stmt: VariableDeclarationStmt) -> None:
+        # HACK: register function name before resolving the body to allow recursion.
+        # Some proper mechanism for "late resolution" should be added.
+        if isinstance(stmt.initializer, AnonymousFunctionExpr):
+            stmt.uniq_id = self._register_ident(stmt.ident)
         if stmt.initializer:
-            with self._mark_as_dirty(stmt.ident) if self._resolved_vars.is_local() else nullcontext():
+            ctx = (
+                self._mark_as_dirty(stmt.ident)
+                if self._resolved_vars.is_local() and not isinstance(stmt.initializer, AnonymousFunctionExpr)
+                else nullcontext()
+            )
+            with ctx:
                 self.visit(stmt.initializer)
-        stmt.uniq_id = self._register_ident(stmt.ident)
+        if not isinstance(stmt.initializer, AnonymousFunctionExpr):
+            stmt.uniq_id = self._register_ident(stmt.ident)

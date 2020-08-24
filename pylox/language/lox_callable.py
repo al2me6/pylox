@@ -3,8 +3,8 @@ from itertools import repeat
 from typing import Optional, Sequence
 
 from pylox.language.lox_types import LoxIdentifier, LoxObject
-from pylox.parsing.expr import VariableExpr
-from pylox.parsing.stmt import FunctionDeclarationStmt, Stmt
+from pylox.parsing.expr import AnonymousFunctionExpr, VariableExpr
+from pylox.parsing.stmt import Stmt
 from pylox.utilities.stacked_map import RawStack
 
 
@@ -19,7 +19,7 @@ class LoxCallable(ABC):
 
 
 class LoxFunction(LoxCallable):
-    def __init__(self, declaration: FunctionDeclarationStmt, frame: RawStack[LoxIdentifier, LoxObject]) -> None:
+    def __init__(self, declaration: AnonymousFunctionExpr, frame: RawStack[LoxIdentifier, LoxObject]) -> None:
         self.params = declaration.params
         self.arity = len(self.params)
         self.body = declaration.body

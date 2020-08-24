@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from pylox.language.lox_types import LoxIdentifier
 from pylox.lexing.token import Token
-from pylox.parsing.expr import Expr, VariableExpr
+from pylox.parsing.expr import Expr
 from pylox.utilities import ast_node_pretty_printer, indent
 
 
@@ -43,19 +43,6 @@ class BlockStmt(GroupingDirective):
 @dataclass
 class ExpressionStmt(Stmt):
     expression: Expr
-
-
-@dataclass
-class FunctionDeclarationStmt(Stmt):
-    name: Token
-    params: List[VariableExpr]
-    body: GroupingDirective
-    uniq_id: Optional[LoxIdentifier] = None
-
-    def __str__(self) -> str:
-        params_text = ", ".join(param.target.lexeme for param in self.params)
-        body_text = "".join(indent(str(stmt)) for stmt in self.body.body)
-        return f"<function: {self.name.lexeme}, [{params_text}],\n{body_text}>"
 
 
 @dataclass

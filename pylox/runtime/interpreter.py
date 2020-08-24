@@ -88,10 +88,6 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
         self._evaluate(stmt.expression)
 
-    def _visit_FunctionDeclarationStmt__(self, stmt: FunctionDeclarationStmt) -> None:
-        assert stmt.uniq_id is not None
-        self._environment.define(stmt.uniq_id, LoxFunction(stmt, self._environment.tail()))
-
     def _visit_IfStmt__(self, stmt: IfStmt) -> None:
         if lox_truth(self._evaluate(stmt.condition)):
             self._execute(stmt.then_branch)
@@ -118,6 +114,9 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
             self._execute(stmt.body)
 
     # ~~~ Expression interpreters ~~~
+
+    def _visit_AnonymousFunctionExpr__(self, expr: AnonymousFunctionExpr) -> LoxFunction:
+        return LoxFunction(expr, self._environment.tail())
 
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> LoxObject:
         if expr.target_id is None:

@@ -163,8 +163,9 @@ class Parser:
         try:
             if self._tv.advance_if_match(Tk.VAR):
                 decl = self._variable_declaration_parselet()
-            elif self._tv.advance_if_match(Tk.FUN):
-                decl = self._callable_object_parselet(kind="function")
+            elif self._tv.peek() == Tk.FUN and self._tv.peek(1) == Tk.IDENTIFIER:
+                self._tv.advance()
+                decl = self._named_callable_parselet(kind="function")
             else:
                 decl = self._statement()
         except LoxSyntaxError as error:
@@ -174,41 +175,15 @@ class Parser:
 
         return decl
 
-    def _callable_object_parselet(self, *, kind: str) -> FunctionDeclarationStmt:
+    def _named_callable_parselet(self, *, kind: str) -> VariableDeclarationStmt:
         """Parse callable (function and method) declarations.
 
-        Note that the values of the function's parameters will be inserted
-        into the top of the function body when executed.
-
-        When ran, the function:
-
-        ```
-        fun foo(bar, baz) {
-            return bar * 2 + baz;
-        }
-        ```
-
-        is executed as:
-
-        ```
-        {
-            var bar = SOME_VALUE;
-            var baz = SOME_OTHER_VALUE;
-            return var * 2 + baz;
-        }
-
-        Production: `"fun" IDENT "(" IDENT? ( "," IDENT )* ")" "{" STMT* "}" ;`
+        Production: `"fun" IDENT ANONYMOUS_FUNCTION_EXPR ;`
         ```
         """
         name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
-        self._expect_punct(Tk.LEFT_PAREN, f"after {kind} name")
-        params = list(self._parse_repeatedly(
-            lambda: VariableExpr(self._expect_next(Tk.IDENTIFIER, "Expect parameter name.")),
-            terminator_expect_message="after parameters"
-        ))
-        self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
-        body = GroupingDirective(*self._parse_statements_in_block())
-        return FunctionDeclarationStmt(name, params, body)
+        body = self._anonymous_function_expression_parselet(kind)
+        return VariableDeclarationStmt(name, body)
 
     def _variable_declaration_parselet(self) -> VariableDeclarationStmt:
         """A variable declared without assignment is implicitly `nil`.
@@ -432,6 +407,8 @@ class Parser:
                 Tk.TRUE: True,
                 Tk.NIL: None
             }.get(token_type, token.literal))
+        elif token_type is Tk.FUN:
+            left = self._anonymous_function_expression_parselet("function")
         elif token_type is Tk.IDENTIFIER:
             left = VariableExpr(token)
         else:
@@ -478,6 +455,40 @@ class Parser:
                 break
 
         return left
+
+    def _anonymous_function_expression_parselet(self, kind: str) -> AnonymousFunctionExpr:
+        """Parse the arguments and body of a function.
+
+        Note that the values of the function's parameters will be inserted
+        into the top of the function body when executed.
+
+        When ran, the function:
+
+        ```
+        fun foo(bar, baz) {
+            return bar * 2 + baz;
+        }
+        ```
+
+        is executed as:
+
+        ```
+        {
+            var bar = SOME_VALUE;
+            var baz = SOME_OTHER_VALUE;
+            return var * 2 + baz;
+        }
+
+        Production: `"(" IDENT? ( "," IDENT )* ")" "{" STMT* "}" ;`
+        """
+        self._expect_punct(Tk.LEFT_PAREN, f"before {kind} arguments")
+        params = list(self._parse_repeatedly(
+            lambda: VariableExpr(self._expect_next(Tk.IDENTIFIER, "Expect parameter name.")),
+            terminator_expect_message="after parameters"
+        ))
+        self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
+        body = GroupingDirective(*self._parse_statements_in_block())
+        return AnonymousFunctionExpr(params, body)
 
     def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
         if isinstance(left, VariableExpr):
