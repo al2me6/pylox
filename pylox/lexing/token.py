@@ -9,14 +9,14 @@ from pylox.language.lox_types import LoxLiteral
 
 class Tk(Enum):
     # Single-char:
-    LEFT_BRACE = "{"
-    RIGHT_BRACE = "}"
+    BRACE_LEFT = "{"
+    BRACE_RIGHT = "}"
     COLON = ":"
     COMMA = ","
     DOT = "."
     MINUS = "-"
-    LEFT_PAREN = "("
-    RIGHT_PAREN = ")"
+    PAREN_LEFT = "("
+    PAREN_RIGHT = ")"
     PLUS = "+"
     QUESTION = "?"
     SEMICOLON = ";"
@@ -51,7 +51,7 @@ class Tk(Enum):
     TRUE = "@TRUE"
     VAR = "@VAR"
     WHILE = "@WHILE"
-    # literals
+    # Literals:
     EOF = auto()
     IDENTIFIER = auto()
     NUMBER = auto()

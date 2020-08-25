@@ -53,7 +53,7 @@ OPERATOR_PRECEDENCE = {
     Tk.SLASH: Prec.FACTOR,
     Tk.STAR: Prec.FACTOR,
     Tk.STAR_STAR: Prec.EXP,
-    Tk.LEFT_PAREN: Prec.CALL,
+    Tk.PAREN_LEFT: Prec.CALL,
 }
 
 
@@ -122,7 +122,7 @@ class Parser:
             self, parselet: Callable[[], Union[_T, Optional[_T]]],
             *,
             separator: Optional[Tk] = Tk.COMMA,
-            terminator: Tk = Tk.RIGHT_PAREN,
+            terminator: Tk = Tk.PAREN_RIGHT,
             terminator_expect_message: str = "after expression"
     ) -> Iterator[_T]:
         """Repeatedly parse items of a certain type until a marker token is reached.
@@ -131,7 +131,7 @@ class Parser:
         :type parselet: Callable[[], Union[T, Optional[_T]]]
         :param separator: separator between each item, defaults to Tk.COMMA
         :type separator: Optional[Tk], optional
-        :param terminator: end marker, defaults to Tk.RIGHT_PAREN
+        :param terminator: end marker, defaults to Tk.PAREN_RIGHT
         :type terminator: Tk, optional
         :param terminator_expect_message: error message if the marker is not found, defaults to "after expression"
         :type terminator_expect_message: str, optional
@@ -152,7 +152,7 @@ class Parser:
         return self._parse_repeatedly(
             self._declaration,
             separator=None,
-            terminator=Tk.RIGHT_BRACE,
+            terminator=Tk.BRACE_RIGHT,
             terminator_expect_message="after block"
         )
 
@@ -202,7 +202,7 @@ class Parser:
             stmt = self._for_statement_parselet()
         elif self._tv.advance_if_match(Tk.IF):
             stmt = self._if_statement_parselet()
-        elif self._tv.advance_if_match(Tk.LEFT_BRACE):
+        elif self._tv.advance_if_match(Tk.BRACE_LEFT):
             stmt = BlockStmt(*self._parse_statements_in_block())
         elif self._tv.advance_if_match(Tk.SWITCH):
             stmt = self._switch_statement_parselet()
@@ -251,7 +251,7 @@ class Parser:
         Production: `"for" "(" ( VAR_STMT | EXPR )? ";" EXPR? ";" EXPR? ")" STMT ;`
         ```
         """
-        self._expect_punct(Tk.LEFT_PAREN, "after 'for'")
+        self._expect_punct(Tk.PAREN_LEFT, "after 'for'")
 
         initializer: Optional[Stmt]
         if self._tv.advance_if_match(Tk.SEMICOLON):
@@ -264,8 +264,8 @@ class Parser:
         condition = self._expression() if self._tv.peek() != Tk.SEMICOLON else LiteralExpr(True)
         self._expect_punct(Tk.SEMICOLON, "after loop condition")
 
-        increment = self._expression() if self._tv.peek() != Tk.RIGHT_PAREN else None
-        self._expect_punct(Tk.RIGHT_PAREN, "after for clauses")
+        increment = self._expression() if self._tv.peek() != Tk.PAREN_RIGHT else None
+        self._expect_punct(Tk.PAREN_RIGHT, "after for clauses")
 
         body = self._statement()
 
@@ -285,32 +285,32 @@ class Parser:
 
         Production: `"if" "(" EXPR ")" STMT ( "else" STMT )? ;`
         """
-        self._expect_punct(Tk.LEFT_PAREN, "after 'if'")
+        self._expect_punct(Tk.PAREN_LEFT, "after 'if'")
         condition = self._expression()
-        self._expect_punct(Tk.RIGHT_PAREN, "after if condition")
+        self._expect_punct(Tk.PAREN_RIGHT, "after if condition")
         then_branch = BlockStmt(self._statement())
         else_branch = BlockStmt(self._statement()) if self._tv.advance_if_match(Tk.ELSE) else None
         return IfStmt(condition, then_branch, else_branch)
 
     def _switch_statement_parselet(self) -> GroupingDirective:
         # TODO: reimplement switches without desugaring and allow matching multiple conditions to one action.
-        self._expect_punct(Tk.LEFT_PAREN, "after 'switch'")
+        self._expect_punct(Tk.PAREN_LEFT, "after 'switch'")
         condition = self._expression()
-        self._expect_punct(Tk.RIGHT_PAREN, "after switch condition")
+        self._expect_punct(Tk.PAREN_RIGHT, "after switch condition")
 
         # Cache the value being switched against so that it is only executed once.
         cache_var = Token.create_arbitrary(Tk.IDENTIFIER, f"__lox_temp_{id(condition):x}")
         block = BlockStmt(VariableDeclarationStmt(cache_var, condition))
         cached_condition = VariableExpr(cache_var)
 
-        self._expect_next(Tk.LEFT_BRACE, "Expect '{' before switch arms")
+        self._expect_next(Tk.BRACE_LEFT, "Expect '{' before switch arms")
 
         switch: Optional[IfStmt] = None
         inner_ref = switch  # Cache a reference to the innermost if statement.
         default_action: Optional[Stmt] = None
 
         # Build the tree of if statements.
-        while self._tv.peek() != Tk.RIGHT_BRACE:
+        while self._tv.peek() != Tk.BRACE_RIGHT:
             arm_condition = self._expression()
             self._expect_next(Tk.EQUAL_GREATER, "Expect '=>' after switch arm")
             arm_action = self._statement()
@@ -331,7 +331,7 @@ class Parser:
                     inner_ref.else_branch = arm  # Add another if to the end of the tree.
                 inner_ref = arm  # Cache the inner if statement to avoid tree transversal on the the next pass.
 
-        self._expect_next(Tk.RIGHT_BRACE, "Expect '}' after switch arms")
+        self._expect_next(Tk.BRACE_RIGHT, "Expect '}' after switch arms")
 
         if switch is None:
             if default_action is not None:
@@ -354,9 +354,9 @@ class Parser:
 
         Production: `"while" "(" EXPR ")" STMT ;`
         """
-        self._expect_punct(Tk.LEFT_PAREN, "after 'while'")
+        self._expect_punct(Tk.PAREN_LEFT, "after 'while'")
         condition = self._expression()
-        self._expect_punct(Tk.RIGHT_PAREN, "after while condition")
+        self._expect_punct(Tk.PAREN_RIGHT, "after while condition")
         return WhileStmt(condition, BlockStmt(self._statement()))
 
     def _expression(self, min_precedence: Prec = Prec.NONE) -> Expr:
@@ -395,9 +395,9 @@ class Parser:
         # Parse prefix operators and literals into the LHS.
         token = self._tv.advance()
         left: Expr
-        if (token_type := token.token_type) is Tk.LEFT_PAREN:
+        if (token_type := token.token_type) is Tk.PAREN_LEFT:
             enclosed = self._expression()
-            self._expect_punct(Tk.RIGHT_PAREN, "after expression")
+            self._expect_punct(Tk.PAREN_RIGHT, "after expression")
             left = GroupingExpr(enclosed)
         elif token_type in {Tk.BANG, Tk.MINUS}:
             left = UnaryExpr(token, self._expression(Prec.UNARY))
@@ -435,13 +435,13 @@ class Parser:
                     middle = self._expression()
                     self._expect_punct(Tk.COLON, "in ternary if operator")
 
-                if op_type not in {Tk.LEFT_PAREN}:  # Postfix operators do not have an RHS expression.
+                if op_type not in {Tk.PAREN_LEFT}:  # Postfix operators do not have an RHS expression.
                     # Otherwise, parse the RHS up to the current operator's precedence,
                     # taking right associativity into account, if necessary.
                     right = self._expression(prec.adjust_for_operator_associativity(op_type))
 
                 # Build the new LHS.
-                if op_type is Tk.LEFT_PAREN:
+                if op_type is Tk.PAREN_LEFT:
                     left = CallExpr(left, op, list(self._parse_repeatedly(self._expression)))
                 elif op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)
@@ -481,12 +481,12 @@ class Parser:
 
         Production: `"(" IDENT? ( "," IDENT )* ")" "{" STMT* "}" ;`
         """
-        self._expect_punct(Tk.LEFT_PAREN, f"before {kind} arguments")
+        self._expect_punct(Tk.PAREN_LEFT, f"before {kind} arguments")
         params = list(self._parse_repeatedly(
             lambda: VariableExpr(self._expect_next(Tk.IDENTIFIER, "Expect parameter name.")),
             terminator_expect_message="after parameters"
         ))
-        self._expect_punct(Tk.LEFT_BRACE, f"before {kind} body")
+        self._expect_punct(Tk.BRACE_LEFT, f"before {kind} body")
         body = GroupingDirective(*self._parse_statements_in_block())
         return AnonymousFunctionExpr(params, body)
 
