@@ -116,26 +116,26 @@ class Parser:
             self._tv.advance()
         return
 
-    T = TypeVar("T")
+    _T = TypeVar("_T")
 
     def _parse_repeatedly(
-            self, parselet: Callable[[], Union[T, Optional[T]]],
+            self, parselet: Callable[[], Union[_T, Optional[_T]]],
             *,
             separator: Optional[Tk] = Tk.COMMA,
             terminator: Tk = Tk.RIGHT_PAREN,
             terminator_expect_message: str = "after expression"
-    ) -> Iterator[T]:
+    ) -> Iterator[_T]:
         """Repeatedly parse items of a certain type until a marker token is reached.
 
         :param parselet: parser for a single item (can return None; will be dropped)
-        :type parselet: Callable[[], Union[T, Optional[T]]]
+        :type parselet: Callable[[], Union[T, Optional[_T]]]
         :param separator: separator between each item, defaults to Tk.COMMA
         :type separator: Optional[Tk], optional
         :param terminator: end marker, defaults to Tk.RIGHT_PAREN
         :type terminator: Tk, optional
         :param terminator_expect_message: error message if the marker is not found, defaults to "after expression"
         :type terminator_expect_message: str, optional
-        :rtype: Iterator[T]
+        :rtype: Iterator[_T]
         """
         while self._has_next():
             if self._tv.peek_unwrap().token_type is terminator:
