@@ -1,14 +1,22 @@
+from enum import Enum, auto
 from typing import TYPE_CHECKING, NewType, Optional, Union
 
 if TYPE_CHECKING:
     from pylox.language.lox_callable import LoxCallable
+    from pylox.language.lox_class import LoxClass, LoxInstance
     from pylox.parsing.expr import VariableExpr
 
 LoxLiteral = Union[str, float]
 LoxPrimitive = Union[float, str, bool, None]
-LoxObject = Union[LoxPrimitive, "VariableExpr", "LoxCallable"]
+LoxObject = Union[LoxPrimitive, "VariableExpr", "LoxCallable", "LoxInstance"]
 
 LoxIdentifier = NewType("LoxIdentifier", int)
+
+
+class FunctionKind(Enum):
+    FUNCTION = "function"
+    METHOD = "method"
+    CONSTRUCTOR = auto()
 
 
 def lox_is_valid_identifier_start(char: Optional[str]) -> bool:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import IntEnum, auto
 from typing import Callable, Iterator, List, Optional, TypeVar, Union
 
+from pylox.language.lox_types import FunctionKind
 from pylox.lexing.token import Tk, Token
 from pylox.parsing.expr import *
 from pylox.parsing.stmt import *
@@ -53,6 +54,7 @@ OPERATOR_PRECEDENCE = {
     Tk.SLASH: Prec.FACTOR,
     Tk.STAR: Prec.FACTOR,
     Tk.STAR_STAR: Prec.EXP,
+    Tk.DOT: Prec.CALL,
     Tk.PAREN_LEFT: Prec.CALL,
 }
 
@@ -60,8 +62,8 @@ OPERATOR_PRECEDENCE = {
 class Parser:
     """A simple Pratt parser.
 
-    Its logic is derived from `clox`'s implementation, though the implementation
-    is motivated by Aleksey Kladov's article on the subject:
+    Its logic is derived from a combination of `jlox` and `clox`, though the
+    implementation is motivated by Aleksey Kladov's article on the subject:
     https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html.
     """
 
@@ -125,7 +127,7 @@ class Parser:
             terminator: Tk = Tk.PAREN_RIGHT,
             terminator_expect_message: str = "after expression"
     ) -> Iterator[_T]:
-        """Repeatedly parse items of a certain type until a marker token is reached.
+        """Repeatedly and *lazily* parse items of a certain type until a marker token is reached.
 
         :param parselet: parser for a single item (can return None; will be dropped)
         :type parselet: Callable[[], Union[T, Optional[_T]]]
@@ -145,7 +147,7 @@ class Parser:
             if separator:
                 if not self._tv.advance_if_match(separator):
                     break
-        self._expect_next(terminator, f"Expect '{terminator.value}' {terminator_expect_message}.")
+        self._expect_punct(terminator, terminator_expect_message)
 
     def _parse_statements_in_block(self) -> Iterator[Stmt]:
         """*Lazily* parse productions of the form `STMT* "}" ;`, yielding each enclosed statement."""
@@ -163,9 +165,11 @@ class Parser:
         try:
             if self._tv.advance_if_match(Tk.VAR):
                 decl = self._variable_declaration_parselet()
+            elif self._tv.advance_if_match(Tk.CLASS):
+                decl = self._class_declaration_parselet()
             elif self._tv.peek() == Tk.FUN and self._tv.peek(1) == Tk.IDENTIFIER:
                 self._tv.advance()
-                decl = self._named_callable_parselet(kind="function")
+                decl = self._named_callable_parselet(FunctionKind.FUNCTION)
             else:
                 decl = self._statement()
         except LoxSyntaxError as error:
@@ -175,13 +179,27 @@ class Parser:
 
         return decl
 
-    def _named_callable_parselet(self, *, kind: str) -> VariableDeclarationStmt:
+    def _class_declaration_parselet(self) -> ClassDeclarationStmt:
+        name = self._expect_next(Tk.IDENTIFIER, "Expect class name.")
+        self._expect_punct(Tk.BRACE_LEFT, "before class body")
+        instance_variables = list(self._parse_repeatedly(
+            lambda: (
+                self._named_callable_parselet(FunctionKind.METHOD) if self._tv.peek(1) == Tk.PAREN_LEFT
+                else self._variable_declaration_parselet()
+            ),
+            separator=None,
+            terminator=Tk.BRACE_RIGHT,
+            terminator_expect_message="after class body"
+        ))
+        return ClassDeclarationStmt(name, instance_variables)
+
+    def _named_callable_parselet(self, kind: FunctionKind) -> VariableDeclarationStmt:
         """Parse callable (function and method) declarations.
 
-        Production: `"fun" IDENT ANONYMOUS_FUNCTION_EXPR ;`
+        Production: `"fun"? IDENT ANONYMOUS_FUNCTION_EXPR ;`
         ```
         """
-        name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind} name.")
+        name = self._expect_next(Tk.IDENTIFIER, f"Expect {kind.value} name.")
         body = self._anonymous_function_expression_parselet(kind)
         return VariableDeclarationStmt(name, body)
 
@@ -392,7 +410,7 @@ class Parser:
             > No more tokens -> unwind.
             > Complete.
         """
-        # Parse prefix operators and literals into the LHS.
+        # Parse prefix operators and primary expressions into the LHS.
         token = self._tv.advance()
         left: Expr
         if (token_type := token.token_type) is Tk.PAREN_LEFT:
@@ -408,9 +426,11 @@ class Parser:
                 Tk.NIL: None
             }.get(token_type, token.literal))
         elif token_type is Tk.FUN:
-            left = self._anonymous_function_expression_parselet("function")
+            left = self._anonymous_function_expression_parselet(FunctionKind.FUNCTION)
         elif token_type is Tk.IDENTIFIER:
             left = VariableExpr(token)
+        elif token_type is Tk.THIS:
+            left = ThisExpr(token)
         else:
             raise LoxSyntaxError.at_token(token, "Expect expression.")
 
@@ -435,20 +455,23 @@ class Parser:
                     middle = self._expression()
                     self._expect_punct(Tk.COLON, "in ternary if operator")
 
-                if op_type not in {Tk.PAREN_LEFT}:  # Postfix operators do not have an RHS expression.
+                # Postfix operators do not have an RHS expression.
+                if op_type not in {Tk.DOT, Tk.PAREN_LEFT}:
                     # Otherwise, parse the RHS up to the current operator's precedence,
                     # taking right associativity into account, if necessary.
                     right = self._expression(prec.adjust_for_operator_associativity(op_type))
 
                 # Build the new LHS.
-                if op_type is Tk.PAREN_LEFT:
+                if op_type in {Tk.AND, Tk.OR}:
+                    left = LogicalExpr(op, left, right)
+                elif op_type is Tk.DOT:
+                    left = self._attribute_access_expression_parselet(left)
+                elif op_type is Tk.EQUAL:
+                    left = self._assignment_expression_parselet(op, left, right)
+                elif op_type is Tk.PAREN_LEFT:
                     left = CallExpr(left, op, list(self._parse_repeatedly(self._expression)))
                 elif op_type is Tk.QUESTION:
                     left = TernaryIfExpr(left, middle, right)
-                elif op_type is Tk.EQUAL:
-                    left = self._assignment_expression_parselet(op, left, right)
-                elif op_type in {Tk.AND, Tk.OR}:
-                    left = LogicalExpr(op, left, right)
                 else:
                     left = BinaryExpr(op, left, right)
             else:  # If it's not an operator, we're done.
@@ -456,7 +479,7 @@ class Parser:
 
         return left
 
-    def _anonymous_function_expression_parselet(self, kind: str) -> AnonymousFunctionExpr:
+    def _anonymous_function_expression_parselet(self, kind: FunctionKind) -> AnonymousFunctionExpr:
         """Parse the arguments and body of a function.
 
         Note that the values of the function's parameters will be inserted
@@ -481,19 +504,30 @@ class Parser:
 
         Production: `"(" IDENT? ( "," IDENT )* ")" "{" STMT* "}" ;`
         """
-        self._expect_punct(Tk.PAREN_LEFT, f"before {kind} arguments")
+        self._expect_punct(Tk.PAREN_LEFT, f"before {kind.value} arguments")
         params = list(self._parse_repeatedly(
             lambda: VariableExpr(self._expect_next(Tk.IDENTIFIER, "Expect parameter name.")),
             terminator_expect_message="after parameters"
         ))
         self._expect_punct(Tk.BRACE_LEFT, f"before {kind} body")
         body = GroupingDirective(*self._parse_statements_in_block())
-        return AnonymousFunctionExpr(params, body)
+        return AnonymousFunctionExpr(params, body, kind)
 
-    def _assignment_expression_parselet(self, op: Token, left: Expr, right: Expr) -> AssignmentExpr:
+    def _assignment_expression_parselet(
+            self,
+            op: Token,
+            left: Expr,
+            right: Expr
+    ) -> Union[AssignmentExpr, DynamicAssignmentExpr]:
         if isinstance(left, VariableExpr):
             return AssignmentExpr(left.target, right)
+        if isinstance(left, AttributeAccessExpr):
+            return DynamicAssignmentExpr(left, right)
         raise LoxSyntaxError.at_token(op, "Invalid assignment target.")
+
+    def _attribute_access_expression_parselet(self, left: Expr) -> AttributeAccessExpr:
+        attr_name = self._expect_next(Tk.IDENTIFIER, "Expect property name after '.'.")
+        return AttributeAccessExpr(left, attr_name)
 
 
 __all__ = ("Parser",)

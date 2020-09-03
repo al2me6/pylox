@@ -1,16 +1,15 @@
-from abc import ABC
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, Optional
 
-from pylox.language.lox_types import LoxIdentifier, LoxPrimitive, lox_object_to_repr
+from pylox.language.lox_types import FunctionKind, LoxIdentifier, LoxPrimitive, lox_object_to_repr
 from pylox.lexing.token import Token
-from pylox.utilities import ast_node_pretty_printer, indent
+from pylox.utilities import ast_node_pretty_printer
 
 if TYPE_CHECKING:
     from pylox.parsing.stmt import GroupingDirective
 
 
-class Expr(ABC):
+class Expr:
     """Base class for expressions which have differing attributes."""
 
     def __str__(self) -> str:
@@ -22,10 +21,11 @@ class Expr(ABC):
 class AnonymousFunctionExpr(Expr):
     params: List["VariableExpr"]
     body: "GroupingDirective"
+    kind: FunctionKind
 
     def __str__(self) -> str:
         params_text = ", ".join(param.target.lexeme for param in self.params)
-        return f"(anonymousfunction [{params_text}],\n{indent(str(self.body))})"
+        return f"(anonymousfunction [{params_text}], {self.body})"
 
 
 @dataclass
@@ -33,6 +33,18 @@ class AssignmentExpr(Expr):
     target: Token
     value: Expr
     target_id: Optional[LoxIdentifier] = None
+
+
+@dataclass
+class DynamicAssignmentExpr(Expr):
+    target: "AttributeAccessExpr"
+    value: Expr
+
+
+@dataclass
+class AttributeAccessExpr(Expr):
+    target: Expr
+    attribute: Token
 
 
 @dataclass
@@ -81,20 +93,17 @@ class TernaryIfExpr(Expr):
 
 
 @dataclass
+class ThisExpr(Expr):
+    keyword: Token
+
+
+@dataclass
 class UnaryExpr(Expr):
     operator: Token
     right: Expr
 
     def __str__(self) -> str:
         return f"({self.operator.lexeme} {self.right})"
-
-
-# class PathExpr(Expr):
-#     raise NotImplementedError
-
-
-# class AttributeAccessExpr(Expr):
-#     raise NotImplementedError
 
 
 @dataclass

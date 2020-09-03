@@ -1,4 +1,3 @@
-from abc import ABC
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -8,7 +7,7 @@ from pylox.parsing.expr import Expr
 from pylox.utilities import ast_node_pretty_printer, indent
 
 
-class Stmt(ABC):
+class Stmt:
     """Base class for Lox statements."""
 
     def __str__(self) -> str:
@@ -38,6 +37,16 @@ class BlockStmt(GroupingDirective):
             self.body = body[0].body  # type: ignore
         else:
             super().__init__(*body)
+
+@dataclass
+class ClassDeclarationStmt(Stmt):
+    name: Token
+    instance_variables: List["VariableDeclarationStmt"]
+    uniq_id: Optional[LoxIdentifier] = None
+
+    def __str__(self) -> str:
+        body_text = "".join(indent(str(stmt)) for stmt in self.instance_variables)
+        return f"<{type(self).__name__.lower().replace('stmt', '')}: {self.name}\n{indent(body_text)}\n{self.uniq_id}>"
 
 
 @dataclass

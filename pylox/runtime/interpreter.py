@@ -2,10 +2,11 @@ from contextlib import nullcontext
 from operator import add, ge, gt, le, lt, mul
 from operator import pow as op_pow
 from operator import sub
-from typing import Any, Callable, Dict, List, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from pylox.language.lox_callable import LoxCallable, LoxFunction, LoxReturn
-from pylox.language.lox_types import (LoxIdentifier, LoxObject, LoxPrimitive, lox_division, lox_equality,
+from pylox.language.lox_class import LoxClass, LoxInstance
+from pylox.language.lox_types import (FunctionKind, LoxIdentifier, LoxObject, LoxPrimitive, lox_division, lox_equality,
                                       lox_object_to_str, lox_truth)
 from pylox.lexing.token import Tk, Token
 from pylox.parsing.expr import *
@@ -13,6 +14,7 @@ from pylox.parsing.stmt import *
 from pylox.runtime.resolver import Resolver
 from pylox.utilities import are_of_expected_type, dump_internal
 from pylox.utilities.error import NOT_REACHED, LoxError, LoxErrorHandler, LoxRuntimeError
+from pylox.utilities.scoped_state_handler import ScopedStateHandler
 from pylox.utilities.stacked_map import StackedMap
 from pylox.utilities.visitor import Visitor
 
@@ -26,6 +28,7 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
         self._resolver = Resolver()
         self.reinitialize_environment()
         self._dump = dump
+        self._current_bound_instance: ScopedStateHandler[Optional[LoxInstance]] = ScopedStateHandler(None)
 
     def interpret(self, ast: List[Stmt]) -> None:
         try:
@@ -66,17 +69,19 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
 
     # ~~~ Callable interpreter ~~~
 
-    def _call(self, callee: LoxCallable, arguments: Sequence[LoxObject]) -> LoxObject:
+    def _call(self, callee: LoxFunction, arguments: Sequence[LoxObject]) -> LoxObject:
         try:
-            assert callee.arity == len(arguments)
-            with self._environment.graft(callee.environment), self._environment.scope():
-                for param, arg in zip(callee.params, arguments):
-                    assert param.target_id is not None
-                    self._environment.define(param.target_id, arg)
-                self._execute(callee.body)
+            with self._environment.graft(callee.closure), self._environment.scope():
+                with self._current_bound_instance.enter(callee.bound_instance):
+                    for param, arg in zip(callee.params, arguments):
+                        assert param.target_id is not None
+                        self._environment.define(param.target_id, arg)
+                    self._execute(callee.body)
         except LoxReturn as value:
-            return value.value
-        return None
+            if not callee.kind is FunctionKind.CONSTRUCTOR:
+                return value.value
+        # Force a constructor to return the constructed instance.
+        return None if (not callee.kind is FunctionKind.CONSTRUCTOR) else callee.bound_instance
 
     # ~~~ Statement interpreters ~~~
 
@@ -84,6 +89,14 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
         with self._environment.scope() if isinstance(stmt, BlockStmt) else nullcontext():
             for inner_stmt in stmt.body:
                 self._execute(inner_stmt)
+
+    def _visit_ClassDeclarationStmt__(self, stmt: ClassDeclarationStmt) -> None:
+        assert stmt.uniq_id is not None
+        fields: Dict[str, LoxObject] = dict()
+        for field in stmt.instance_variables:
+            assert field.initializer is not None
+            fields[field.ident.lexeme] = self._evaluate(field.initializer)
+        self._environment.define(stmt.uniq_id, LoxClass(stmt.name, fields, self._environment.tail()))
 
     def _visit_ExpressionStmt__(self, stmt: ExpressionStmt) -> None:
         self._evaluate(stmt.expression)
@@ -116,7 +129,7 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
     # ~~~ Expression interpreters ~~~
 
     def _visit_AnonymousFunctionExpr__(self, expr: AnonymousFunctionExpr) -> LoxFunction:
-        return LoxFunction(expr, self._environment.tail())
+        return LoxFunction(expr, self._environment.tail()).bind_to_instance(self._current_bound_instance.state)
 
     def _visit_AssignmentExpr__(self, expr: AssignmentExpr) -> LoxObject:
         if expr.target_id is None:
@@ -124,6 +137,25 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
         value = self._evaluate(expr.value)
         self._environment.assign(expr.target_id, value)
         return value
+
+    def _visit_DynamicAssignmentExpr__(self, expr: DynamicAssignmentExpr) -> LoxObject:
+        resolved_target = self._evaluate(expr.target.target)
+        if not isinstance(resolved_target, LoxInstance):
+            raise LoxRuntimeError.at_token(expr.target.attribute, "Only instances have fields.", fatal=True)
+        value = self._evaluate(expr.value)
+        resolved_target.set(expr.target.attribute.lexeme, value)
+        return value
+
+    def _visit_AttributeAccessExpr__(self, expr: AttributeAccessExpr) -> LoxObject:
+        resolved_target = self._evaluate(expr.target)
+        if not isinstance(resolved_target, LoxInstance):
+            raise LoxRuntimeError.at_token(expr.attribute, "Only instances have properties.", fatal=True)
+        try:
+            return resolved_target.get(expr.attribute.lexeme)
+        except KeyError:
+            raise LoxRuntimeError.at_token(
+                expr.attribute, f"Undefined property '{expr.attribute.lexeme}'.", fatal=True
+            )
 
     def _visit_BinaryExpr__(self, expr: BinaryExpr) -> Union[bool, float, str]:
         """Evaluate the two operands, ensure that their types match, and finally
@@ -165,11 +197,22 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
     def _visit_CallExpr__(self, expr: CallExpr) -> LoxObject:
         callee = self._evaluate(expr.callee)
         arguments = tuple(map(self._evaluate, expr.arguments))
+
         if not isinstance(callee, LoxCallable):
             raise LoxRuntimeError.at_token(expr.paren, "Can only call functions and classes.")
         if (found := len(arguments)) != (expected := callee.arity):
             raise LoxRuntimeError.at_token(expr.paren, f"Expected {expected} arguments but got {found}.")
-        return self._call(callee, arguments)
+
+        if isinstance(callee, LoxFunction):
+            return self._call(callee, arguments)
+
+        if isinstance(callee, LoxClass):
+            instance = LoxInstance(callee)
+            if callee.constructor:
+                self._call(callee.constructor.bind_to_instance(instance), arguments)
+            return instance
+
+        raise NOT_REACHED
 
     def _visit_GroupingExpr__(self, expr: GroupingExpr) -> LoxObject:
         """Evaluate a group by evaluating the expression contained within."""
@@ -195,6 +238,11 @@ class Interpreter(Visitor[Union[Expr, Stmt], Union[None, LoxObject]]):
             expr.then_branch if lox_truth(self._evaluate(expr.condition))
             else expr.else_branch
         )
+
+    def _visit_ThisExpr__(self, expr: ThisExpr) -> LoxObject:  # pylint: disable=unused-argument
+        instance = self._current_bound_instance.state
+        assert instance is not None
+        return instance
 
     def _visit_UnaryExpr__(self, expr: UnaryExpr) -> Union[bool, float]:
         """Evaluate the operand and then apply the correct unary operation.
