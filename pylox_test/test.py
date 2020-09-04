@@ -5,6 +5,8 @@ Test suite for Pylox.
 Parts of this code are adapted from
 https://github.com/munificent/craftinginterpreters/blob/93e3f56e3cfd78a9facc747b3ec6e5022ae7f4bc/util/test.py
 by Bob Nystrom, licensed MIT.
+
+As such, this file is distributed under the MIT license.
 """
 
 import os
@@ -139,10 +141,10 @@ class Tester:
         "../test_suite_extensions",
     )
 
-    IGNORED = (
-        "function/print.lox",
-        "function/too_many_arguments.lox",
-        "function/too_many_parameters.lox",
+    IGNORED_PATHS = (
+        "function/print.lox",  # No `clock()` function yet.
+        "function/too_many_arguments.lox",  # Arbitrary restrictions are not implemented.
+        "function/too_many_parameters.lox",  # Arbitrary restrictions are not implemented.
     )
 
     def __init__(self) -> None:
@@ -150,17 +152,15 @@ class Tester:
         self._lox_instance = Lox(Debug.JAVA_STYLE_TOKENS | Debug.REDUCED_ERROR_REPORTING)
         self._fails_output = StringIO()
 
-        self._test_root = Path(os.path.realpath(__file__)).parent.parent.parent / "test_suite"
+        self._test_root = Path(os.path.realpath(__file__)).parent.parent / "test_suite"
         if not self._test_root.is_dir():
             raise FileNotFoundError("Test suite not found!")
         print(f"Test suite discovered at '{self._test_root}'.")
 
-        ignored_realpaths = tuple(
-            map(lambda path: self._test_root / path, self.IGNORED)
-        )
+        ignored_paths_full = tuple(self._test_root / path for path in self.IGNORED_PATHS)
 
         for path in self.TEST_PATHS:
-            self._discover_and_queue_tests(self._test_root / path, ignored_realpaths)
+            self._discover_and_queue_tests(self._test_root / path, ignored_paths_full)
         print(f"{len(self._queued_tests)} tests found.")
 
     def test(self) -> None:
