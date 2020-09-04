@@ -7,25 +7,19 @@ https://github.com/munificent/craftinginterpreters/blob/93e3f56e3cfd78a9facc747b
 by Bob Nystrom, licensed MIT.
 """
 
-import io
 import os
 import re
 import sys
 from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
+from io import StringIO
 from operator import eq
 from pathlib import Path
-from typing import Collection, List, Optional, Sequence, TypeVar
-
-from termcolor import colored
+from typing import Collection, Iterable, List, Optional, Sequence, TypeVar
 
 from pylox.lox import Lox
+from pylox.utilities import indent
 from pylox.utilities.configuration import Debug
 from pylox.utilities.error import LoxExit
-
-
-def indent(*block: str) -> str:
-    return "\n".join(f"\t{line}" for blk in block for line in blk.splitlines())
-
 
 T = TypeVar("T")
 
@@ -34,6 +28,14 @@ def compare_inner(left: Collection[T], right: Collection[T]) -> bool:
     if len(left) != len(right):
         return False
     return all(map(eq, left, right))
+
+
+def red(string: str) -> str:
+    return f"\033[31m{string}\033[0m"
+
+
+def green(string: str) -> str:
+    return f"\033[32m{string}\033[0m"
 
 
 OUTPUT_EXPECT = re.compile(r'// expect: ?(.*)')
@@ -50,11 +52,11 @@ class Test:
         self._expected_output: List[str] = list()
         self._expected_errors: List[str] = list()
 
-    def execute(self, lox_instance: Lox) -> bool:
+    def execute(self, lox_instance: Lox, out_buf: StringIO) -> bool:
         lox_instance.interpreter.reinitialize_environment()
 
-        out_capture = io.StringIO()
-        err_capture = io.StringIO()
+        out_capture = StringIO()
+        err_capture = StringIO()
         with self.path.open("r") as fil:
             source = fil.read()
 
@@ -67,11 +69,11 @@ class Test:
         err = tuple(line.strip() for line in err_capture.getvalue().splitlines())
 
         if not (message := self._verify(out, err)):
-            print(f"[{colored('PASS', 'green')}]: {self.path}")
+            print(f"[{green('PASS')}]: {self.path}", file=out_buf)
             return True
         else:
-            print(f"[{colored('FAIL', 'red')}]: {self.path}")
-            print(indent(message))
+            print(f"[{red('FAIL')}]: {self.path}", file=out_buf)
+            print(indent(message), file=out_buf)
             return False
 
     def _compute_expected_output(self, source: str) -> None:
@@ -92,7 +94,7 @@ class Test:
         self._expected_errors.extend(expect_runtime_error)
 
     def _verify(self, output: Sequence[str], errors: Sequence[str]) -> Optional[str]:
-        error_message = "Expect:\n{}\nEncountered:\n{}\n"
+        error_message = "Expect:\n{}Encountered:\n{}\n"
         errors = tuple(map(self._reformat_pylox_error, errors))
         if not compare_inner(errors, self._expected_errors):
             return error_message.format(indent(*self._expected_errors), indent(*errors))
@@ -137,17 +139,28 @@ class Tester:
         "../test_suite_extensions",
     )
 
+    IGNORED = (
+        "function/print.lox",
+        "function/too_many_arguments.lox",
+        "function/too_many_parameters.lox",
+    )
+
     def __init__(self) -> None:
         self._queued_tests: List[Test] = list()
         self._lox_instance = Lox(Debug.JAVA_STYLE_TOKENS | Debug.REDUCED_ERROR_REPORTING)
+        self._fails_output = StringIO()
 
         self._test_root = Path(os.path.realpath(__file__)).parent.parent.parent / "test_suite"
         if not self._test_root.is_dir():
             raise FileNotFoundError("Test suite not found!")
         print(f"Test suite discovered at '{self._test_root}'.")
 
+        ignored_realpaths = tuple(
+            map(lambda path: self._test_root / path, self.IGNORED)
+        )
+
         for path in self.TEST_PATHS:
-            self._discover_and_queue_tests(self._test_root / path)
+            self._discover_and_queue_tests(self._test_root / path, ignored_realpaths)
         print(f"{len(self._queued_tests)} tests found.")
 
     def test(self) -> None:
@@ -158,19 +171,23 @@ class Tester:
         test_count_str_len = len(str(test_count))
 
         for num, test in enumerate(self._queued_tests, start=1):
-            print(f"{num:>{test_count_str_len}}/{test_count} ", end="")
-            if not test.execute(self._lox_instance):
+            out_buf = StringIO()
+            print(f"{num:>{test_count_str_len}}/{test_count} ", end="", file=out_buf)
+            result = test.execute(self._lox_instance, out_buf)
+            print(out_buf.getvalue().rstrip())
+            if not result:
                 errors += 1
+                print(f"{out_buf.getvalue().rstrip()}\n", file=self._fails_output)
 
-        print()
         if errors:
+            print(f"\nThe following tests {red('failed')}:\n\n{self._fails_output.getvalue()}", end="")
             print(
-                f"{errors} tests {colored('failed', 'red')}, "
-                f"{test_count-errors} tests {colored('passed', 'green')}."
+                f"{errors} tests {red('failed')}, "
+                f"{test_count-errors} tests {green('passed')}."
             )
             sys.exit(1)
         else:
-            print(f"All {test_count} tests {colored('passed', 'green')}!")
+            print(f"\nAll {test_count} tests {green('passed')}!")
             sys.exit()
 
     @contextmanager
@@ -181,10 +198,11 @@ class Tester:
         for option in options:
             self._lox_instance.debug_flags ^= option
 
-    def _discover_and_queue_tests(self, path: Path) -> None:
+    def _discover_and_queue_tests(self, path: Path, ignored: Iterable[Path]) -> None:
         assert path.exists()
         if path.is_dir():
             for sub_path in sorted(path.iterdir()):
-                self._discover_and_queue_tests(path / sub_path)
+                self._discover_and_queue_tests(path / sub_path, ignored)
         else:  # Is file.
-            self._queued_tests.append(Test(path))
+            if path not in ignored:
+                self._queued_tests.append(Test(path))
