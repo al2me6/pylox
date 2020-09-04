@@ -152,7 +152,7 @@ class Tester:
         self._lox_instance = Lox(Debug.JAVA_STYLE_TOKENS | Debug.REDUCED_ERROR_REPORTING)
         self._fails_output = StringIO()
 
-        self._test_root = Path(os.path.realpath(__file__)).parent.parent / "test_suite"
+        self._test_root = Path(os.path.realpath(__file__)).parent / "test_suite"
         if not self._test_root.is_dir():
             raise FileNotFoundError("Test suite not found!")
         print(f"Test suite discovered at '{self._test_root}'.")
