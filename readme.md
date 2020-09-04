@@ -18,7 +18,7 @@ This implementation attempts to preserve compatibility (or offer compatibility f
 * Uses a Pratt parser instead of `jlox`'s recursive descent parser
 * Extended debug features toggled by command-line switches
 * A right-associative exponentiation operator `**`
-* C-style ternary if statement: `var a = foo ? 2 : 3; var b = bar ? 10 : baz ? 20 : 30;`
+* C-style ternary if expression: `var a = foo ? 2 : 3; var b = bar ? 10 : baz ? 20 : 30;`
 * Switch-case statement
 * Anonymous functions
 
@@ -245,4 +245,4 @@ print maybeExists.unwrap();  // value
 
 `pylox` is licensed under the [GNU GPL, version 3](./LICENSE).
 
-Test suites and the Lox language are the work of [Robert Nystrom](https://github.com/munificent); they are distributed under their original licenses.
+Test files (found under the `test_suite` directory, with minor modifications) and the Lox language are the work of [Robert Nystrom](https://github.com/munificent); they are distributed under their original licenses.
