@@ -2,11 +2,9 @@
 
 Yet another implementation of the [Lox language](https://github.com/munificent/craftinginterpreters) by Bob Nystrom, written in type-annotated Python 3.8.
 
-This is a work-in-progress.
+`pylox` is a perpetually-work-in-progress research project/learning opportunity. In no way should this project be ever considered a language suitable for actual usage. There are **exactly zero guarantees** as to feature stability, soundness, performance, or any other metric characteristic of a production-ready language. That said, even as a research project, it ought to reach a (very) basic level of usability, mainly in regards of correctness and performance.
 
-The implementation here is largely based on Bob's AST-walking `jlox`, with a significant number of changes and additions.
-
-Note that it should be considered a *translation* from Java to Python, not a *transliteration*.
+The implementation here is roughly based on Bob's AST-walking `jlox`, with a significant number of changes and additions. Note that it should be considered a *liberal translation* from Java to Python, not a *transliteration*. While the general "shape" of the approach remains, the exact implementation differs significantly in details, in part necessitated by the language of implementation, in part due to personal preference.
 
 This implementation attempts to preserve compatibility (or offer compatibility flags) with vanilla `jlox` as much as possible. However, due to `pylox`'s additional features, some error messages will necessarily diverge.
 
@@ -14,13 +12,15 @@ This implementation attempts to preserve compatibility (or offer compatibility f
 
 `pylox` implements a number of extensions to the Lox language and provides significant quality-of-life-improvements compared to the reference implementations.
 
-* Better error reporting: the offending line is printed and the offending token indicated
+* Significantly improved error reporting: the offending line is printed and the offending token indicated
 * Uses a Pratt parser instead of `jlox`'s recursive descent parser
+* Variable resolution strategy based on assigning each variable a unique ID
+  * Attribute access remains dynamic
 * Extended debug features toggled by command-line switches
+* Anonymous functions
 * A right-associative exponentiation operator `**`
 * C-style ternary if expression: `var a = foo ? 2 : 3; var b = bar ? 10 : baz ? 20 : 30;`
 * Switch-case statement
-* Anonymous functions
 
 ### Anonymous functions
 
@@ -146,6 +146,7 @@ Note that these are entirely undeveloped.
   * Special methods in `op$op_name` format
   * `class Foo { op$add(other) { return Foo(this.foo + other.foo); } }`
   * Desugar *all* operators (including for numbers and strings) into function calls
+* Traits
 * Pattern matching
 
 #### Module system
@@ -245,4 +246,6 @@ print maybeExists.unwrap();  // value
 
 `pylox` is licensed under the [GNU GPL, version 3](./LICENSE).
 
-Test files (found under the `test_suite` directory, with minor modifications) and the Lox language are the work of [Robert Nystrom](https://github.com/munificent); they are distributed under their original licenses.
+The Lox language is the work of [Robert Nystrom](https://github.com/munificent).
+
+The test suite (found under the `pylox_test/test_suite` directory, with minor modifications) and the test runner are derived from Robert's reference implementation for `jlox` and `clox` and are distributed under their original MIT license.
